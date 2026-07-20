@@ -1,0 +1,6 @@
+# copy this file to .dev.vars (gitignored) and fill in real values
+# from your GitHub OAuth app (see SETUP.md)
+GITHUB_CLIENT_ID=your-dev-oauth-app-client-id
+GITHUB_CLIENT_SECRET=your-dev-oauth-app-client-secret
+# any long random string, e.g. run: openssl rand -hex 32
+SESSION_SECRET=change-me-to-something-long-and-random

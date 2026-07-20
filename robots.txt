@@ -27,3 +27,5 @@ Disallow: /
 # ── everyone else (normal search engines) ────────────────────
 User-agent: *
 Allow: /
+Disallow: /edit
+Disallow: /api/

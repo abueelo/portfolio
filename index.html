@@ -31,7 +31,7 @@
   </nav>
 </header>
 
-<main>
+<main class="home">
 
   <section id="about">
     <h2><span class="bracket" aria-hidden="true">[ </span>about<span class="bracket" aria-hidden="true"> ]</span></h2>
@@ -175,13 +175,75 @@
       <span class="social-label" aria-hidden="true">linkedin</span>
     </a>
   </div>
-  <p><span aria-hidden="true">☼ </span>plain html + css · 2026<span aria-hidden="true"> ☼</span></p>
+  <p><span aria-hidden="true">☼ </span>plain html + css · 2026 <a class="edit-link" href="/edit" aria-label="edit this site">☼</a></p>
   <!-- logo sources: the github badge is traced from the official GitHub mark
        (github.githubassets.com/images/modules/logos_page/GitHub-Mark.png, via
        github.com/logos); the linkedin badge is original half-block art. -->
 </footer>
 
 <script>
+  // hydrate the projects section from the saved list (set via /edit);
+  // if the fetch fails or nothing is saved yet, the baked-in list stays
+  fetch('/api/projects').then(function (r) { return r.json(); }).then(function (projects) {
+    if (!Array.isArray(projects) || projects.length === 0) return;
+    var section = document.getElementById('projects');
+    section.querySelectorAll('.project').forEach(function (el) { el.remove(); });
+    projects.forEach(function (p) {
+      var article = document.createElement('article');
+      article.className = 'project';
+
+      var h3 = document.createElement('h3');
+      var glyph = document.createElement('span');
+      glyph.className = 'glyph';
+      glyph.setAttribute('aria-hidden', 'true');
+      glyph.textContent = '▒';
+      var name = document.createElement('a');
+      name.href = p.url;
+      name.textContent = p.name.toLowerCase();
+      var fill = document.createElement('span');
+      fill.className = 'fill';
+      fill.setAttribute('aria-hidden', 'true');
+      var lang = document.createElement('span');
+      lang.className = 'lang';
+      lang.textContent = p.language ? p.language.toLowerCase() : '';
+      h3.appendChild(glyph); h3.appendChild(name); h3.appendChild(fill); h3.appendChild(lang);
+      article.appendChild(h3);
+
+      if (p.blurb) {
+        var blurb = document.createElement('p');
+        blurb.className = 'repo-desc';
+        blurb.textContent = p.blurb;
+        article.appendChild(blurb);
+      }
+      if (p.description) {
+        var desc = document.createElement('p');
+        desc.className = 'desc';
+        desc.textContent = p.description;
+        article.appendChild(desc);
+      }
+
+      var links = document.createElement('p');
+      links.className = 'links';
+      var arrow = document.createElement('span');
+      arrow.className = 'glyph';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '» ';
+      var code = document.createElement('a');
+      code.href = p.url;
+      code.textContent = 'code';
+      links.appendChild(arrow); links.appendChild(code);
+      if (p.homepage) {
+        links.appendChild(document.createTextNode(' · '));
+        var live = document.createElement('a');
+        live.href = p.homepage;
+        live.textContent = 'live';
+        links.appendChild(live);
+      }
+      article.appendChild(links);
+      section.appendChild(article);
+    });
+  }).catch(function () { /* offline/file preview — baked list stays */ });
+
   // assemble the email address at runtime so it never appears in the
   // page source — plain-HTML scrapers only see "thom [at] russl [dot] dev"
   (function () {
