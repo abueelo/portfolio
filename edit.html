@@ -130,7 +130,7 @@
     return el;
   }
 
-  function controls(li, name, removable) {
+  function controls(li, name, removable, describe) {
     var wrap = document.createElement('span');
     wrap.className = 'row-controls';
     var specs = [['▲', 'move ' + name + ' up'], ['▼', 'move ' + name + ' down']];
@@ -142,7 +142,12 @@
         b.textContent = spec[0];
         b.setAttribute('aria-label', spec[1]);
         b.addEventListener('click', function () {
-          if (spec[0] === '×') { li.remove(); return; }
+          if (spec[0] === '×') {
+            var label = describe ? describe() : name;
+            if (!confirm('Remove ' + label + '? It will be gone once you save.')) return;
+            li.remove();
+            return;
+          }
           var target = spec[0] === '▲' ? li.previousElementSibling : li.nextElementSibling;
           if (!target) return;
           if (spec[0] === '▲') li.parentNode.insertBefore(li, target);
@@ -205,7 +210,10 @@
     li.appendChild(input('h-start', 'start — e.g. 2024', entry.start));
     li.appendChild(input('h-end', 'end — blank for "now"', entry.end));
     li.appendChild(input('h-what', 'what — e.g. bsc software engineering with electronics · university of westminster', entry.what));
-    li.appendChild(controls(li, 'entry', true));
+    li.appendChild(controls(li, 'this entry', true, function () {
+      var what = li.querySelector('.h-what').value.trim();
+      return what ? '"' + what + '"' : 'this history entry';
+    }));
     return li;
   }
 
@@ -221,7 +229,10 @@
     li.appendChild(input('p-title', 'title', photo.title));
     li.appendChild(input('p-location', 'location', photo.location));
     li.appendChild(input('p-taken', 'taken (e.g. jan 2026)', photo.taken));
-    li.appendChild(controls(li, photo.title || 'photo', true));
+    li.appendChild(controls(li, 'this photo', true, function () {
+      var title = li.querySelector('.p-title').value.trim();
+      return title ? '"' + title + '"' : 'this photo';
+    }));
     return li;
   }
 
@@ -249,7 +260,10 @@
     li.appendChild(input('c-label', 'label', entry.label));
     li.appendChild(input('c-text', 'shown text', entry.text));
     li.appendChild(input('c-url', 'url (https:// or mailto:) — optional', entry.url, 'url'));
-    li.appendChild(controls(li, 'row', true));
+    li.appendChild(controls(li, 'this row', true, function () {
+      var label = li.querySelector('.c-label').value.trim();
+      return label ? 'the "' + label + '" row' : 'this row';
+    }));
     return li;
   }
 
@@ -352,6 +366,7 @@
   });
 
   $('cv-remove').addEventListener('click', function () {
+    if (!confirm('Remove the uploaded CV? This takes effect immediately, not just on save.')) return;
     var status = $('cv-status');
     status.textContent = 'removing…';
     fetch('/api/cv', { method: 'DELETE' }).then(function (res) {

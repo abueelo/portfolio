@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thom Russell</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='8' y='13' font-family='Menlo, Consolas, monospace' font-size='13' text-anchor='middle' fill='%23c9a25e'>§</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
+  </script>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+  <p class="tagline">404<span class="cursor" aria-hidden="true">█</span></p>
+
+  <nav aria-label="sections">
+    <a href="/"><span class="key" aria-hidden="true">[h]</span> home</a>
+    <button id="theme-toggle" type="button" aria-label="toggle light/dark theme">
+      <span class="key" aria-hidden="true">[t]</span> <span class="mode">light</span>
+    </button>
+  </nav>
+  </div>
+</header>
+
+<main>
+  <section id="not-found">
+    <h2><span class="bracket" aria-hidden="true">[ </span>dead end<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p>you've dug into unmapped rock — there's nothing at this path.</p>
+    <p class="links"><span class="glyph" aria-hidden="true">»</span> <a href="/">back to the surface</a></p>
+  </section>
+</main>
+
+<footer>
+  <p><span aria-hidden="true">☼ </span><a class="edit-link" href="/edit"><span class="swap">abueelo</span></a> · <span id="year">1970</span><span aria-hidden="true"> ☼</span></p>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  var root = document.documentElement;
+  var toggle = document.getElementById('theme-toggle');
+  function setTheme(theme) {
+    root.dataset.theme = theme;
+    localStorage.setItem('theme', theme);
+    toggle.querySelector('.mode').textContent = theme === 'light' ? 'dark' : 'light';
+  }
+  setTheme(root.dataset.theme);
+  toggle.addEventListener('click', function () {
+    setTheme(root.dataset.theme === 'light' ? 'dark' : 'light');
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 't') { toggle.click(); return; }
+    if (e.key === 'h') window.location.href = '/';
+  });
+</script>
+
+</body>
+</html>
