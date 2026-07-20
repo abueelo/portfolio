@@ -322,6 +322,10 @@ section h2 .bracket {
   margin-bottom: 1.25rem;
 }
 
+.photo-list-hint {
+  margin-top: 1.5rem;
+}
+
 .error {
   color: var(--amber);
 }
