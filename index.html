@@ -341,6 +341,11 @@
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 't') { toggle.click(); return; }
     if (e.key === 'g') { window.location.href = '/photography'; return; }
+    if (e.key === 'h') {
+      var reducedTop = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      window.scrollTo({ top: 0, behavior: reducedTop ? 'auto' : 'smooth' });
+      return;
+    }
     var target = { a: 'about', p: 'projects', l: 'contact' }[e.key];
     if (!target) return;
     var el = document.getElementById(target);
