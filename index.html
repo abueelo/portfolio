@@ -175,7 +175,7 @@
       <span class="social-label" aria-hidden="true">linkedin</span>
     </a>
   </div>
-  <p><span aria-hidden="true">☼ </span>abueelo · <span id="year">2026</span> <a class="edit-link" href="/edit" aria-label="edit this site">☼</a></p>
+  <p><span aria-hidden="true">☼ </span>abueelo · <span id="year">1970</span> <a class="edit-link" href="/edit" aria-label="edit this site">☼</a></p>
   <!-- logo sources: the github badge is traced from the official GitHub mark
        (github.githubassets.com/images/modules/logos_page/GitHub-Mark.png, via
        github.com/logos); the linkedin badge is original half-block art. -->
@@ -246,7 +246,7 @@
     });
   }).catch(function () { /* offline/file preview — baked list stays */ });
 
-  // keep the footer year current (the 2026 in the HTML is the no-JS fallback)
+  // keep the footer year current (no-JS fallback: 1970, the unix epoch)
   document.getElementById('year').textContent = new Date().getFullYear();
 
   // assemble the email address at runtime so it never appears in the
