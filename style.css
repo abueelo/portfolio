@@ -1,0 +1,370 @@
+/* ── palette ─────────────────────────────────────────────── */
+:root {
+  --bg:     #1b1b18;  /* warm near-black, not pure black */
+  --fg:     #b8b5a9;  /* soft warm grey body text */
+  --dim:    #6e6b60;  /* metadata, labels, decorations */
+  --border: #3a3a34;  /* section frames */
+  --amber:  #c9a25e;  /* links, highlights */
+  --cyan:   #7a9e9f;  /* secondary accent, used sparingly */
+}
+
+/* light mode — warm paper, same muted spirit */
+:root[data-theme="light"] {
+  --bg:     #e9e5d8;
+  --fg:     #4a473d;
+  --dim:    #8d887a;
+  --border: #c6c1b0;
+  --amber:  #8f6b26;
+  --cyan:   #46707a;
+}
+
+/* ── base ────────────────────────────────────────────────── */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  scroll-behavior: smooth;
+  transition: background-color 0.25s ease;
+}
+
+body {
+  font-family: ui-monospace, "Cascadia Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 15px;
+  line-height: 1.7;
+  color: var(--fg);
+  background: var(--bg);
+  max-width: 80ch;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 2rem;
+  overflow-x: hidden;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+::selection {
+  background: var(--amber);
+  color: var(--bg);
+}
+
+a {
+  color: var(--amber);
+  text-decoration: none;
+  transition: color 0.15s ease;
+}
+
+a:hover,
+a:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* ── header ──────────────────────────────────────────────── */
+.name {
+  color: var(--fg);
+  font-size: min(1rem, calc((100vw - 3rem) / 30));
+  line-height: 1.25;
+  user-select: none;
+}
+
+.tagline {
+  color: var(--dim);
+  margin-top: 1rem;
+}
+
+.cursor {
+  color: var(--amber);
+  margin-left: 0.5ch;
+  animation: blink 1.2s steps(1) infinite;
+}
+
+@keyframes blink {
+  50% { opacity: 0; }
+}
+
+nav {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 2.5ch;
+}
+
+nav a {
+  color: var(--fg);
+}
+
+nav a:hover,
+nav a:focus-visible {
+  color: var(--amber);
+}
+
+nav .key {
+  color: var(--cyan);
+}
+
+#theme-toggle {
+  font: inherit;
+  color: var(--fg);
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+#theme-toggle:hover,
+#theme-toggle:focus-visible {
+  color: var(--amber);
+  text-decoration: underline;
+  text-underline-offset: 0.2em;
+}
+
+#theme-toggle .key {
+  color: var(--cyan);
+}
+
+/* ── sections ────────────────────────────────────────────── */
+section {
+  position: relative;
+  border: 1px solid var(--border);
+  padding: 1.5rem 1.75rem 1.25rem;
+  margin-top: 2.75rem;
+  transition: border-color 0.25s ease;
+}
+
+section:hover {
+  border-color: #54524a;
+}
+
+section h2 {
+  position: absolute;
+  top: -0.85em;
+  left: 1.25ch;
+  background: var(--bg);
+  padding: 0 1ch;
+  font-size: 1rem;
+  font-weight: normal;
+  color: var(--fg);
+  letter-spacing: 0.05em;
+}
+
+section h2 .bracket {
+  color: var(--dim);
+}
+
+/* ── projects ────────────────────────────────────────────── */
+.project + .project {
+  margin-top: 1.75rem;
+}
+
+.project h3 {
+  display: flex;
+  align-items: baseline;
+  gap: 1ch;
+  font-size: 1rem;
+  font-weight: normal;
+}
+
+.project h3 .glyph {
+  color: var(--cyan);
+  transition: color 0.2s ease;
+}
+
+.project:hover h3 .glyph {
+  color: var(--amber);
+}
+
+.project h3 .fill {
+  flex: 1;
+  min-width: 3ch;
+  border-bottom: 1px dotted var(--dim);
+  transform: translateY(-0.35em);
+}
+
+.project .lang {
+  color: var(--dim);
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.repo-desc {
+  color: var(--dim);
+  font-style: italic;
+  margin-top: 0.15rem;
+}
+
+.desc {
+  margin-top: 0.35rem;
+}
+
+.desc.placeholder {
+  color: var(--dim);
+}
+
+.links {
+  margin-top: 0.35rem;
+}
+
+.links .glyph {
+  color: var(--dim);
+}
+
+/* ── contact ─────────────────────────────────────────────── */
+.contact-list {
+  list-style: none;
+}
+
+.contact-list .label {
+  display: inline-block;
+  width: 10ch;
+  color: var(--dim);
+}
+
+/* ── footer ──────────────────────────────────────────────── */
+footer {
+  margin-top: 2.75rem;
+  text-align: center;
+  color: var(--dim);
+  font-size: 0.85rem;
+}
+
+.social {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 4ch;
+  margin-bottom: 1.25rem;
+}
+
+.social a {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.15rem;
+  color: var(--dim);
+}
+
+.social a:hover,
+.social a:focus-visible {
+  color: var(--amber);
+  text-decoration: none;
+}
+
+.social pre {
+  /* line-height 1.2 × char width 0.6em keeps the half-block pixels square */
+  font-size: 0.3rem;
+  line-height: 1.2;
+  transition: color 0.2s ease;
+}
+
+.social-label {
+  font-size: 0.8rem;
+}
+
+/* ── entrance ────────────────────────────────────────────── */
+header,
+section,
+footer {
+  animation: rise 0.5s ease-out both;
+}
+
+header { animation-delay: 0s; }
+#about { animation-delay: 0.08s; }
+#projects { animation-delay: 0.16s; }
+#contact { animation-delay: 0.24s; }
+footer { animation-delay: 0.32s; }
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* ── wide screens ────────────────────────────────────────── */
+@media (min-width: 1000px) {
+  body {
+    max-width: 1280px;
+    padding: 3.5rem 3rem 2.5rem;
+  }
+
+  /* nav sits in the header's right edge, level with the tagline */
+  header {
+    position: relative;
+  }
+
+  nav {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    margin-top: 0;
+  }
+
+  /* about + contact share a row; projects span the full width */
+  main {
+    display: grid;
+    grid-template-areas:
+      "about contact"
+      "projects projects";
+    grid-template-columns: 2fr 1.2fr;
+    gap: 2.75rem 2.5rem;
+    margin-top: 2.75rem;
+  }
+
+  main section {
+    margin-top: 0;
+  }
+
+  #about { grid-area: about; }
+  #contact { grid-area: contact; }
+  #projects { grid-area: projects; }
+
+  /* projects flow into two columns */
+  #projects {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem 3rem;
+    padding: 1.75rem 2rem 1.5rem;
+  }
+
+  .contact-list .label {
+    width: 8ch;
+  }
+
+  .project + .project {
+    margin-top: 0;
+  }
+}
+
+/* ── small screens ───────────────────────────────────────── */
+@media (max-width: 480px) {
+  body {
+    padding: 2rem 1rem 1.5rem;
+  }
+
+  section {
+    padding: 1.25rem 1rem 1rem;
+  }
+}
