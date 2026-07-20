@@ -321,8 +321,14 @@ section h2 .bracket {
   margin-bottom: 1.25rem;
 }
 
-.photo-list-hint {
+.stack-hint {
   margin-top: 1.5rem;
+}
+
+#editor .wide-input {
+  display: block;
+  width: 100%;
+  margin-top: 0.4rem;
 }
 
 .error {

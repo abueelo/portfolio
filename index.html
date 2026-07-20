@@ -19,7 +19,7 @@
  █  █▀█ █▄█ █ ▀ █   █▀▄ █▄█ ▄█ ▄█ ██▄ █▄▄ █▄▄</pre>
   <h1 class="visually-hidden">Thom Russell</h1>
   <div class="head-row">
-  <p class="tagline">software engineering and electronics · university of westminster<span class="cursor" aria-hidden="true">█</span></p>
+  <p class="tagline"><span id="tagline-text">software engineering and electronics · university of westminster</span><span class="cursor" aria-hidden="true">█</span></p>
 
   <nav aria-label="sections">
     <a href="#about"><span class="key" aria-hidden="true">[a]</span> about</a>
@@ -240,6 +240,10 @@
     var cv = results[1] || {};
     if (site.about) {
       document.getElementById('about-text').textContent = site.about;
+    }
+
+    if (site.tagline) {
+      document.getElementById('tagline-text').textContent = site.tagline;
     }
 
     if (Array.isArray(site.contacts) && site.contacts.length) {

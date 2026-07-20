@@ -37,23 +37,12 @@
 
     <section>
       <h2><span class="bracket" aria-hidden="true">[ </span>about<span class="bracket" aria-hidden="true"> ]</span></h2>
-      <p class="hint">the text in the about box. leave empty to keep what's currently baked into the page.</p>
+      <p class="hint">the line under your name — leave empty to keep the default:</p>
+      <input type="text" id="tagline-input" class="wide-input" maxlength="120"
+        placeholder="software engineering and electronics · university of westminster"
+        aria-label="tagline under your name">
+      <p class="hint stack-hint">the text in the about box. leave empty to keep what's currently baked into the page.</p>
       <textarea id="about-input" rows="4" placeholder="I'm Thom, a Software Engineering with Electronics student…"></textarea>
-    </section>
-
-    <section>
-      <h2><span class="bracket" aria-hidden="true">[ </span>projects<span class="bracket" aria-hidden="true"> ]</span></h2>
-      <p class="hint">tick a repo to show it on the portfolio · ▲▼ set the order ·
-        the optional link (with its own text) shows next to “code”</p>
-      <ul id="repo-list"></ul>
-    </section>
-
-    <section>
-      <h2><span class="bracket" aria-hidden="true">[ </span>history<span class="bracket" aria-hidden="true"> ]</span></h2>
-      <p class="hint">education, employment and such. the portfolio only shows this box
-        once it has at least one entry.</p>
-      <ul id="hist-list" class="edit-rows"></ul>
-      <p><button type="button" class="add" id="hist-add">[ + add entry ]</button></p>
     </section>
 
     <section>
@@ -77,10 +66,25 @@
     </section>
 
     <section>
+      <h2><span class="bracket" aria-hidden="true">[ </span>projects<span class="bracket" aria-hidden="true"> ]</span></h2>
+      <p class="hint">tick a repo to show it on the portfolio · ▲▼ set the order ·
+        the optional link (with its own text) shows next to “code”</p>
+      <ul id="repo-list"></ul>
+    </section>
+
+    <section>
+      <h2><span class="bracket" aria-hidden="true">[ </span>history<span class="bracket" aria-hidden="true"> ]</span></h2>
+      <p class="hint">education, employment and such. the portfolio only shows this box
+        once it has at least one entry.</p>
+      <ul id="hist-list" class="edit-rows"></ul>
+      <p><button type="button" class="add" id="hist-add">[ + add entry ]</button></p>
+    </section>
+
+    <section>
       <h2><span class="bracket" aria-hidden="true">[ </span>photography<span class="bracket" aria-hidden="true"> ]</span></h2>
       <p class="hint">about text shown at the top of /photography — leave empty to keep the default:</p>
       <textarea id="photo-about-input" rows="3" placeholder="When I'm not designing hardware I'm usually out with a camera…" aria-label="photography about text"></textarea>
-      <p class="hint photo-list-hint">photos · uploads are resized to 2400px · ▲▼ set the order ·
+      <p class="hint stack-hint">photos · uploads are resized to 2400px · ▲▼ set the order ·
         × removes the photo when you save</p>
       <ul id="photo-list" class="edit-rows"></ul>
       <p class="cv-controls">
@@ -268,6 +272,7 @@
 
     $('about-input').value = site.about || '';
     $('photo-about-input').value = site.photoAbout || '';
+    $('tagline-input').value = site.tagline || '';
 
     var hist = (site.history && site.history.length) ? site.history : [null];
     hist.forEach(function (h) { $('hist-list').appendChild(histRow(h)); });
@@ -383,6 +388,7 @@
     var site = {
       about: $('about-input').value.trim(),
       photoAbout: $('photo-about-input').value.trim(),
+      tagline: $('tagline-input').value.trim(),
       history: [].map.call(document.querySelectorAll('#hist-list .edit-row'), function (row) {
         return { when: val(row, 'h-when'), what: val(row, 'h-what') };
       }).filter(function (h) { return h.when || h.what; }),
