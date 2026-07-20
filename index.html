@@ -35,8 +35,8 @@
 
   <section id="about">
     <h2><span class="bracket" aria-hidden="true">[ </span>about<span class="bracket" aria-hidden="true"> ]</span></h2>
-    <!-- EDIT: your bio — rewrite this in your own voice -->
-    <p>
+    <!-- EDIT: your bio — rewrite this in your own voice (or use /edit) -->
+    <p id="about-text">
       I'm Thom, a Software Engineering with Electronics student at the
       University of Westminster. I like building physical things: I design
       hardware in Fusion 360, then write the software and firmware that
@@ -245,6 +245,65 @@
       section.appendChild(article);
     });
   }).catch(function () { /* offline/file preview — baked list stays */ });
+
+  // hydrate about, contact rows, and the history box from /api/site
+  fetch('/api/site').then(function (r) { return r.json(); }).then(function (site) {
+    if (site.about) {
+      document.getElementById('about-text').textContent = site.about;
+    }
+
+    if (Array.isArray(site.contacts) && site.contacts.length) {
+      var list = document.querySelector('.contact-list');
+      var emailLi = list.querySelector('a.email');
+      emailLi = emailLi && emailLi.closest('li');
+      list.textContent = '';
+      if (emailLi) list.appendChild(emailLi); // scraper-protected row stays
+      site.contacts.forEach(function (c) {
+        var li = document.createElement('li');
+        var label = document.createElement('span');
+        label.className = 'label';
+        label.textContent = c.label || '';
+        li.appendChild(label);
+        li.appendChild(document.createTextNode(' '));
+        if (c.url) {
+          var a = document.createElement('a');
+          a.href = c.url;
+          a.textContent = c.text || c.url;
+          li.appendChild(a);
+        } else {
+          li.appendChild(document.createTextNode(c.text || ''));
+        }
+        list.appendChild(li);
+      });
+    }
+
+    if (Array.isArray(site.history) && site.history.length) {
+      var section = document.createElement('section');
+      section.id = 'history';
+      var h2 = document.createElement('h2');
+      ['[ ', 'history', ' ]'].forEach(function (part, i) {
+        var span = document.createElement('span');
+        if (i !== 1) { span.className = 'bracket'; span.setAttribute('aria-hidden', 'true'); }
+        span.textContent = part;
+        h2.appendChild(span);
+      });
+      section.appendChild(h2);
+      site.history.forEach(function (h) {
+        var row = document.createElement('p');
+        row.className = 'hist-row';
+        var when = document.createElement('span');
+        when.className = 'when';
+        when.textContent = h.when || '';
+        var what = document.createElement('span');
+        what.className = 'what';
+        what.textContent = h.what || '';
+        row.appendChild(when);
+        row.appendChild(what);
+        section.appendChild(row);
+      });
+      document.getElementById('projects').after(section);
+    }
+  }).catch(function () { /* offline — baked content stays */ });
 
   // keep the footer year current (no-JS fallback: 1970, the unix epoch)
   document.getElementById('year').textContent = new Date().getFullYear();

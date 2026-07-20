@@ -219,6 +219,22 @@ section h2 .bracket {
   color: var(--dim);
 }
 
+/* ── history (education / employment, from /edit) ────────── */
+.hist-row {
+  display: flex;
+  gap: 2ch;
+}
+
+.hist-row + .hist-row {
+  margin-top: 0.35rem;
+}
+
+.hist-row .when {
+  color: var(--dim);
+  flex: none;
+  min-width: 12ch;
+}
+
 /* ── contact ─────────────────────────────────────────────── */
 .contact-list {
   list-style: none;
@@ -308,26 +324,35 @@ section h2 .bracket {
   border-color: var(--amber);
 }
 
-.repo-row textarea {
-  display: block;
-  width: 100%;
-  margin-top: 0.4rem;
+#editor textarea,
+#editor input[type="text"],
+#editor input[type="url"] {
   background: transparent;
   border: 1px solid var(--border);
   color: var(--fg);
   font: inherit;
   font-size: 0.9rem;
   line-height: 1.5;
+  padding: 0.25rem 0.75ch;
+  min-width: 0;
+}
+
+#editor textarea {
+  display: block;
+  width: 100%;
+  margin-top: 0.4rem;
   padding: 0.4rem 0.75ch;
   resize: vertical;
 }
 
-.repo-row textarea:focus {
+#editor textarea:focus,
+#editor input:focus {
   outline: none;
   border-color: var(--amber);
 }
 
-.repo-row textarea::placeholder {
+#editor textarea::placeholder,
+#editor input::placeholder {
   color: var(--dim);
   font-style: italic;
 }
@@ -338,32 +363,50 @@ section h2 .bracket {
   margin-top: 0.4rem;
 }
 
-.link-row input {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--fg);
+.link-row .link-url { flex: 2; }
+.link-row .link-text { flex: 1; }
+
+.edit-rows {
+  list-style: none;
+}
+
+.edit-row {
+  display: flex;
+  gap: 1ch;
+  align-items: center;
+}
+
+.edit-row + .edit-row {
+  margin-top: 0.5rem;
+}
+
+.edit-row .h-when { flex: 1; }
+.edit-row .h-what { flex: 3; }
+.edit-row .c-label { flex: 0.8; }
+.edit-row .c-text { flex: 1.5; }
+.edit-row .c-url { flex: 2; }
+
+.row-controls {
+  display: flex;
+  gap: 0.5ch;
+  flex: none;
+  margin-left: auto;
+}
+
+.add {
   font: inherit;
-  font-size: 0.9rem;
-  padding: 0.25rem 0.75ch;
-  min-width: 0;
-}
-
-.link-row .link-url {
-  flex: 2;
-}
-
-.link-row .link-text {
-  flex: 1;
-}
-
-.link-row input:focus {
-  outline: none;
-  border-color: var(--amber);
-}
-
-.link-row input::placeholder {
+  font-size: 0.85rem;
   color: var(--dim);
-  font-style: italic;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  margin-top: 0.75rem;
+}
+
+.add:hover,
+.add:focus-visible {
+  color: var(--amber);
 }
 
 .save-row {
@@ -518,6 +561,9 @@ footer { animation-delay: 0.32s; }
   #contact { grid-area: contact; }
   #projects { grid-area: projects; }
 
+  /* JS-inserted history box spans the full width below projects */
+  #history { grid-column: 1 / -1; }
+
   /* projects flow into two columns */
   #projects {
     display: grid;
@@ -543,5 +589,18 @@ footer { animation-delay: 0.32s; }
 
   section {
     padding: 1.25rem 1rem 1rem;
+  }
+
+  .edit-row {
+    flex-wrap: wrap;
+  }
+
+  .edit-row input {
+    flex-basis: 100%;
+  }
+
+  .hist-row {
+    flex-direction: column;
+    gap: 0;
   }
 }
