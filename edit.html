@@ -202,7 +202,8 @@
     entry = entry || {};
     var li = document.createElement('li');
     li.className = 'edit-row';
-    li.appendChild(input('h-when', 'when — e.g. 2024 › now', entry.when));
+    li.appendChild(input('h-start', 'start — e.g. 2024', entry.start));
+    li.appendChild(input('h-end', 'end — blank for "now"', entry.end));
     li.appendChild(input('h-what', 'what — e.g. bsc software engineering with electronics · university of westminster', entry.what));
     li.appendChild(controls(li, 'entry', true));
     return li;
@@ -390,8 +391,8 @@
       photoAbout: $('photo-about-input').value.trim(),
       tagline: $('tagline-input').value.trim(),
       history: [].map.call(document.querySelectorAll('#hist-list .edit-row'), function (row) {
-        return { when: val(row, 'h-when'), what: val(row, 'h-what') };
-      }).filter(function (h) { return h.when || h.what; }),
+        return { start: val(row, 'h-start'), end: val(row, 'h-end'), what: val(row, 'h-what') };
+      }).filter(function (h) { return h.start || h.end || h.what; }),
       contacts: [].map.call(document.querySelectorAll('#contact-list-edit .edit-row'), function (row) {
         return { label: val(row, 'c-label'), text: val(row, 'c-text'), url: val(row, 'c-url') };
       }).filter(function (c) { return c.label || c.text; }),

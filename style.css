@@ -458,7 +458,8 @@ section h2 .bracket {
   margin-top: 0.5rem;
 }
 
-.edit-row .h-when { flex: 1; }
+.edit-row .h-start { flex: 0.8; }
+.edit-row .h-end { flex: 0.8; }
 .edit-row .h-what { flex: 3; }
 .edit-row .c-label { flex: 0.8; }
 .edit-row .c-text { flex: 1.5; }

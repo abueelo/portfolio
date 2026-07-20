@@ -1,7 +1,7 @@
 import { requireOwner, json } from '../_lib.js';
 
 const KEY = 'site';
-const MAX = { about: 3000, tagline: 120, label: 30, text: 100, url: 300, when: 40, what: 200 };
+const MAX = { about: 3000, tagline: 120, label: 30, text: 100, url: 300, start: 30, end: 30, what: 200 };
 const MAX_ROWS = { contacts: 20, history: 30 };
 
 export async function onRequestGet({ env }) {
@@ -41,10 +41,11 @@ export async function onRequestPut({ request, env }) {
 
   const history = [];
   for (const h of Array.isArray(body.history) ? body.history.slice(0, MAX_ROWS.history) : []) {
-    const when = str(h && h.when, MAX.when);
+    const start = str(h && h.start, MAX.start);
+    const end = str(h && h.end, MAX.end);
     const what = str(h && h.what, MAX.what);
-    if (!when && !what) continue;
-    history.push({ when, what });
+    if (!start && !end && !what) continue;
+    history.push({ start, end, what });
   }
 
   const site = { about, photoAbout, tagline, contacts, history };

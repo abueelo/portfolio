@@ -301,7 +301,9 @@
         row.className = 'hist-row';
         var when = document.createElement('span');
         when.className = 'when';
-        when.textContent = h.when || '';
+        when.textContent = h.start || h.end
+          ? (h.start || '') + ' › ' + (h.end || 'now')
+          : (h.when || '');
         var what = document.createElement('span');
         what.className = 'what';
         what.textContent = h.what || '';
