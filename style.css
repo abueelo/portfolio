@@ -630,6 +630,18 @@ footer { animation-delay: 0.32s; }
     padding: 3.5rem 3rem 2.5rem;
   }
 
+  .head-row {
+    flex-wrap: nowrap;
+  }
+
+  .head-row .tagline {
+    flex: none;
+  }
+
+  .head-row nav {
+    justify-content: flex-end;
+  }
+
   main.home {
     display: grid;
     grid-template-areas:
