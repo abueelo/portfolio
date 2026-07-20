@@ -5,14 +5,16 @@
   --border: #3a3a34;
   --amber:  #c9a25e;
   --cyan:   #7a9e9f;
+  --border-hover: #54524a;
 }
 
 :root[data-theme="light"] {
-  --bg:     #e9e5d8;
-  --fg:     #4a473d;
-  --dim:    #8d887a;
-  --border: #c6c1b0;
-  --amber:  #8f6b26;
+  --bg:     #e6dcc4;
+  --fg:     #4a4436;
+  --dim:    #8c8168;
+  --border: #c2b493;
+  --border-hover: #a3946e;
+  --amber:  #8a6420;
   --cyan:   #46707a;
 }
 
@@ -139,7 +141,7 @@ section {
 }
 
 section:hover {
-  border-color: #54524a;
+  border-color: var(--border-hover);
 }
 
 section h2 {
