@@ -64,7 +64,8 @@
     });
   }
 
-  function repoRow(repo, selected, description) {
+  function repoRow(repo, selected, saved) {
+    saved = saved || {};
     var li = document.createElement('li');
     li.className = 'repo-row';
     li.dataset.repo = JSON.stringify(repo);
@@ -114,10 +115,27 @@
     var ta = document.createElement('textarea');
     ta.rows = 2;
     ta.placeholder = repo.blurb || 'description shown on the portfolio…';
-    ta.value = description || '';
+    ta.value = saved.description || '';
+
+    var linkRow = document.createElement('div');
+    linkRow.className = 'link-row';
+    var linkUrl = document.createElement('input');
+    linkUrl.type = 'url';
+    linkUrl.className = 'link-url';
+    linkUrl.placeholder = 'optional link — where it lives / demo / video…';
+    linkUrl.value = saved.linkUrl || '';
+    var linkText = document.createElement('input');
+    linkText.type = 'text';
+    linkText.className = 'link-text';
+    linkText.maxLength = 40;
+    linkText.placeholder = 'link text (e.g. live)';
+    linkText.value = saved.linkText || '';
+    linkRow.appendChild(linkUrl);
+    linkRow.appendChild(linkText);
 
     li.appendChild(head);
     li.appendChild(ta);
+    li.appendChild(linkRow);
     return li;
   }
 
@@ -130,11 +148,11 @@
     saved.forEach(function (p) {
       var repo = byName[p.name] || p;
       delete byName[p.name];
-      list.appendChild(repoRow(repo, true, p.description));
+      list.appendChild(repoRow(repo, true, p));
     });
     // …then everything else
     repos.forEach(function (r) {
-      if (byName[r.name]) list.appendChild(repoRow(r, false, ''));
+      if (byName[r.name]) list.appendChild(repoRow(r, false, null));
     });
   }
 
@@ -152,6 +170,8 @@
         homepage: repo.homepage,
         blurb: repo.blurb,
         description: row.querySelector('textarea').value.trim(),
+        linkUrl: row.querySelector('.link-url').value.trim(),
+        linkText: row.querySelector('.link-text').value.trim(),
       });
     });
     fetch('/api/projects', {

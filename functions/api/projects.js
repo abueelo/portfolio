@@ -2,7 +2,7 @@ import { requireOwner, json } from '../_lib.js';
 
 const KEY = 'projects';
 const MAX_PROJECTS = 30;
-const MAX_LEN = { name: 100, url: 300, language: 60, homepage: 300, description: 2000 };
+const MAX_LEN = { name: 100, url: 300, language: 60, homepage: 300, description: 2000, linkUrl: 300, linkText: 40 };
 
 export async function onRequestGet({ env }) {
   const projects = await env.PORTFOLIO_KV.get(KEY, 'json');
@@ -36,6 +36,10 @@ export async function onRequestPut({ request, env }) {
       const v = p[key];
       return typeof v === 'string' && v.trim() ? v.trim().slice(0, MAX_LEN[key]) : null;
     };
+    const linkUrl = field('linkUrl');
+    if (linkUrl && !/^https?:\/\//.test(linkUrl)) {
+      return json({ error: 'custom links must start with http(s)://' }, { status: 400 });
+    }
     clean.push({
       name: p.name.slice(0, MAX_LEN.name),
       url: p.url.slice(0, MAX_LEN.url),
@@ -43,6 +47,8 @@ export async function onRequestPut({ request, env }) {
       homepage: field('homepage'),
       blurb: field('blurb'),
       description: field('description'),
+      linkUrl,
+      linkText: field('linkText'),
     });
   }
 

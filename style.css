@@ -332,6 +332,40 @@ section h2 .bracket {
   font-style: italic;
 }
 
+.link-row {
+  display: flex;
+  gap: 1ch;
+  margin-top: 0.4rem;
+}
+
+.link-row input {
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--fg);
+  font: inherit;
+  font-size: 0.9rem;
+  padding: 0.25rem 0.75ch;
+  min-width: 0;
+}
+
+.link-row .link-url {
+  flex: 2;
+}
+
+.link-row .link-text {
+  flex: 1;
+}
+
+.link-row input:focus {
+  outline: none;
+  border-color: var(--amber);
+}
+
+.link-row input::placeholder {
+  color: var(--dim);
+  font-style: italic;
+}
+
 .save-row {
   margin-top: 1.5rem;
 }
