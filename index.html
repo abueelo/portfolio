@@ -18,16 +18,19 @@
 ▀█▀ █ █ █▀█ █▀▄▀█   █▀█ █ █ █▀ █▀ █▀▀ █   █
  █  █▀█ █▄█ █ ▀ █   █▀▄ █▄█ ▄█ ▄█ ██▄ █▄▄ █▄▄</pre>
   <h1 class="visually-hidden">Thom Russell</h1>
+  <div class="head-row">
   <p class="tagline">software engineering and electronics · university of westminster<span class="cursor" aria-hidden="true">█</span></p>
 
   <nav aria-label="sections">
     <a href="#about"><span class="key" aria-hidden="true">[a]</span> about</a>
     <a href="#projects"><span class="key" aria-hidden="true">[p]</span> projects</a>
     <a href="#contact"><span class="key" aria-hidden="true">[l]</span> links</a>
+    <a href="/photography"><span class="key" aria-hidden="true">[g]</span> photos</a>
     <button id="theme-toggle" type="button" aria-label="toggle light/dark theme">
       <span class="key" aria-hidden="true">[t]</span> <span class="mode">light</span>
     </button>
   </nav>
+  </div>
 </header>
 
 <main class="home">
@@ -331,6 +334,7 @@
   document.addEventListener('keydown', function (e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 't') { toggle.click(); return; }
+    if (e.key === 'g') { window.location.href = '/photography'; return; }
     var target = { a: 'about', p: 'projects', l: 'contact' }[e.key];
     if (!target) return;
     var el = document.getElementById(target);

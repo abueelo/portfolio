@@ -76,6 +76,19 @@
       </p>
     </section>
 
+    <section>
+      <h2><span class="bracket" aria-hidden="true">[ </span>photography<span class="bracket" aria-hidden="true"> ]</span></h2>
+      <p class="hint">shown on /photography · uploads are resized to 2400px ·
+        ▲▼ set the order · × removes the photo when you save</p>
+      <textarea id="photo-about-input" rows="3" placeholder="the about text on the photography page — leave empty to keep the default"></textarea>
+      <ul id="photo-list" class="edit-rows"></ul>
+      <p class="cv-controls">
+        <input type="file" id="photo-file" accept="image/*" multiple>
+        <button type="button" class="add" id="photo-upload">[ upload ]</button>
+        <span id="photo-status" class="hint" role="status"></span>
+      </p>
+    </section>
+
     <p class="save-row">
       <button id="save" type="button">[ save ]</button>
       <span id="status" role="status"></span>
@@ -190,6 +203,39 @@
     return li;
   }
 
+  function photoRow(photo) {
+    var li = document.createElement('li');
+    li.className = 'edit-row photo-row';
+    li.dataset.id = photo.id;
+    var thumb = document.createElement('img');
+    thumb.className = 'photo-thumb';
+    thumb.src = '/api/photo/' + photo.id;
+    thumb.alt = '';
+    li.appendChild(thumb);
+    li.appendChild(input('p-title', 'title', photo.title));
+    li.appendChild(input('p-location', 'location', photo.location));
+    li.appendChild(input('p-taken', 'taken (e.g. jan 2026)', photo.taken));
+    li.appendChild(controls(li, photo.title || 'photo', true));
+    return li;
+  }
+
+  function resizePhoto(file) {
+    return createImageBitmap(file).then(function (bmp) {
+      var MAXD = 2400;
+      var scale = Math.min(1, MAXD / Math.max(bmp.width, bmp.height));
+      if (scale === 1 && file.type === 'image/jpeg') return file;
+      var canvas = document.createElement('canvas');
+      canvas.width = Math.round(bmp.width * scale);
+      canvas.height = Math.round(bmp.height * scale);
+      canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+      return new Promise(function (resolve, reject) {
+        canvas.toBlob(function (blob) {
+          if (blob) resolve(blob); else reject(new Error('could not process image'));
+        }, 'image/jpeg', 0.85);
+      });
+    });
+  }
+
   function contactRow(entry) {
     entry = entry || {};
     var li = document.createElement('li');
@@ -220,6 +266,7 @@
     });
 
     $('about-input').value = site.about || '';
+    $('photo-about-input').value = site.photoAbout || '';
 
     var hist = (site.history && site.history.length) ? site.history : [null];
     hist.forEach(function (h) { $('hist-list').appendChild(histRow(h)); });
@@ -228,8 +275,40 @@
     contacts.forEach(function (c) { $('contact-list-edit').appendChild(contactRow(c)); });
   }
 
+  function buildPhotos(photos) {
+    photos.forEach(function (p) { $('photo-list').appendChild(photoRow(p)); });
+  }
+
   $('hist-add').addEventListener('click', function () { $('hist-list').appendChild(histRow(null)); });
   $('contact-add').addEventListener('click', function () { $('contact-list-edit').appendChild(contactRow(null)); });
+
+  $('photo-upload').addEventListener('click', function () {
+    var files = [].slice.call($('photo-file').files);
+    var status = $('photo-status');
+    if (!files.length) { status.textContent = 'choose some images first.'; return; }
+    var done = 0;
+    var chain = Promise.resolve();
+    files.forEach(function (file) {
+      chain = chain.then(function () {
+        status.textContent = 'uploading ' + (done + 1) + '/' + files.length + '…';
+        return resizePhoto(file).then(function (blob) {
+          return fetch('/api/photos', { method: 'POST', body: blob });
+        }).then(function (res) {
+          return res.json().then(function (b) {
+            if (!res.ok) throw new Error(b.error || 'upload failed');
+            $('photo-list').appendChild(photoRow(b));
+            done++;
+          });
+        });
+      });
+    });
+    chain.then(function () {
+      status.textContent = '☼ uploaded ' + done + ' photo' + (done === 1 ? '' : 's') + ' — set titles and hit save';
+      $('photo-file').value = '';
+    }).catch(function (err) {
+      status.textContent = 'upload failed after ' + done + ': ' + err.message;
+    });
+  });
 
   function loadCvInfo() {
     fetch('/api/cv?info').then(function (r) { return r.json(); }).then(function (cv) {
@@ -302,6 +381,7 @@
 
     var site = {
       about: $('about-input').value.trim(),
+      photoAbout: $('photo-about-input').value.trim(),
       history: [].map.call(document.querySelectorAll('#hist-list .edit-row'), function (row) {
         return { when: val(row, 'h-when'), what: val(row, 'h-what') };
       }).filter(function (h) { return h.when || h.what; }),
@@ -324,7 +404,16 @@
       });
     }
 
-    Promise.all([put('/api/projects', projects), put('/api/site', site)])
+    var photos = [].map.call(document.querySelectorAll('#photo-list .photo-row'), function (row) {
+      return {
+        id: row.dataset.id,
+        title: val(row, 'p-title'),
+        location: val(row, 'p-location'),
+        taken: val(row, 'p-taken'),
+      };
+    });
+
+    Promise.all([put('/api/projects', projects), put('/api/site', site), put('/api/photos', photos)])
       .then(function () {
         status.textContent = '☼ saved — ' + projects.length + ' project' + (projects.length === 1 ? '' : 's') + ' on display';
       })
@@ -354,8 +443,10 @@
       fetch('/api/repos').then(function (r) { return r.json(); }),
       fetch('/api/projects').then(function (r) { return r.json(); }),
       fetch('/api/site').then(function (r) { return r.json(); }),
+      fetch('/api/photos').then(function (r) { return r.json(); }),
     ]).then(function (results) {
       buildEditor(results[0], results[1], results[2] || {});
+      buildPhotos(results[3] || []);
       loadCvInfo();
       show('editor');
     });

@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>photography · thom russell</title>
+  <meta name="description" content="Photography by Thom Russell.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='8' y='13' font-size='13' text-anchor='middle' fill='%23c9a25e'>☼</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
+  </script>
+</head>
+<body>
+
+<header>
+  <pre class="name" aria-hidden="true">
+▀█▀ █ █ █▀█ █▀▄▀█   █▀█ █ █ █▀ █▀ █▀▀ █   █
+ █  █▀█ █▄█ █ ▀ █   █▀▄ █▄█ ▄█ ▄█ ██▄ █▄▄ █▄▄</pre>
+  <h1 class="visually-hidden">Thom Russell — photography</h1>
+  <div class="head-row">
+  <p class="tagline">photography<span class="cursor" aria-hidden="true">█</span></p>
+
+  <nav aria-label="sections">
+    <a href="/"><span class="key" aria-hidden="true">[h]</span> home</a>
+    <button id="theme-toggle" type="button" aria-label="toggle light/dark theme">
+      <span class="key" aria-hidden="true">[t]</span> <span class="mode">light</span>
+    </button>
+  </nav>
+  </div>
+</header>
+
+<main>
+  <section id="photo-about">
+    <h2><span class="bracket" aria-hidden="true">[ </span>about<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p id="photo-about-text">
+      When I'm not designing hardware I'm usually out with a camera.
+      A collection of my favourite photographs lives here.
+    </p>
+  </section>
+
+  <section id="photographs">
+    <h2><span class="bracket" aria-hidden="true">[ </span>photographs<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p id="photo-empty" class="hint">no photographs yet.</p>
+    <div class="photo-grid" id="photo-grid"></div>
+  </section>
+</main>
+
+<footer>
+  <p><span aria-hidden="true">☼ </span><a class="edit-link" href="/edit"><span class="swap">abueelo</span></a> · <span id="year">1970</span><span aria-hidden="true"> ☼</span></p>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  fetch('/api/site').then(function (r) { return r.json(); }).then(function (site) {
+    if (site && site.photoAbout) {
+      document.getElementById('photo-about-text').textContent = site.photoAbout;
+    }
+  }).catch(function () {});
+
+  fetch('/api/photos').then(function (r) { return r.json(); }).then(function (photos) {
+    if (!Array.isArray(photos) || photos.length === 0) return;
+    document.getElementById('photo-empty').hidden = true;
+    var grid = document.getElementById('photo-grid');
+    photos.forEach(function (p) {
+      var fig = document.createElement('figure');
+      fig.className = 'photo';
+
+      var link = document.createElement('a');
+      link.href = '/api/photo/' + p.id;
+      var img = document.createElement('img');
+      img.src = '/api/photo/' + p.id;
+      img.loading = 'lazy';
+      img.alt = p.title || 'photograph';
+      link.appendChild(img);
+      fig.appendChild(link);
+
+      var cap = document.createElement('figcaption');
+      var glyph = document.createElement('span');
+      glyph.className = 'glyph';
+      glyph.setAttribute('aria-hidden', 'true');
+      glyph.textContent = '▒';
+      var title = document.createElement('span');
+      title.className = 'photo-title';
+      title.textContent = p.title || 'untitled';
+      var fill = document.createElement('span');
+      fill.className = 'fill';
+      fill.setAttribute('aria-hidden', 'true');
+      var meta = document.createElement('span');
+      meta.className = 'photo-meta';
+      meta.textContent = [p.location, p.taken].filter(Boolean).join(' · ');
+      cap.appendChild(glyph);
+      cap.appendChild(title);
+      cap.appendChild(fill);
+      cap.appendChild(meta);
+      fig.appendChild(cap);
+
+      grid.appendChild(fig);
+    });
+  }).catch(function () {});
+
+  var root = document.documentElement;
+  var toggle = document.getElementById('theme-toggle');
+  function setTheme(theme) {
+    root.dataset.theme = theme;
+    localStorage.setItem('theme', theme);
+    toggle.querySelector('.mode').textContent = theme === 'light' ? 'dark' : 'light';
+  }
+  setTheme(root.dataset.theme);
+  toggle.addEventListener('click', function () {
+    setTheme(root.dataset.theme === 'light' ? 'dark' : 'light');
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.target && /^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
+    if (e.key === 't') { toggle.click(); return; }
+    if (e.key === 'h') window.location.href = '/';
+  });
+</script>
+
+</body>
+</html>

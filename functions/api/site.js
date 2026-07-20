@@ -24,6 +24,7 @@ export async function onRequestPut({ request, env }) {
   const str = (v, max) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null);
 
   const about = str(body.about, MAX.about);
+  const photoAbout = str(body.photoAbout, MAX.about);
 
   const contacts = [];
   for (const c of Array.isArray(body.contacts) ? body.contacts.slice(0, MAX_ROWS.contacts) : []) {
@@ -45,7 +46,7 @@ export async function onRequestPut({ request, env }) {
     history.push({ when, what });
   }
 
-  const site = { about, contacts, history };
+  const site = { about, photoAbout, contacts, history };
   await env.PORTFOLIO_KV.put(KEY, JSON.stringify(site));
   return json({ ok: true });
 }

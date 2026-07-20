@@ -25,7 +25,7 @@ cp .dev.vars.example .dev.vars     # then edit it:
 #   GITHUB_CLIENT_SECRET = dev app client secret
 #   SESSION_SECRET       = output of: openssl rand -hex 32
 
-npx wrangler pages dev . --kv PORTFOLIO_KV
+npx wrangler pages dev . --kv PORTFOLIO_KV --r2 PHOTOS
 ```
 
 Open http://localhost:8788 — the site; http://localhost:8788/edit — the console.
@@ -39,11 +39,17 @@ Local KV data is stored under `.wrangler/` (gitignored).
 3. **KV**: Workers & Pages → KV → Create namespace (call it `portfolio`).
    Then in the Pages project → Settings → Bindings → add **KV namespace**:
    variable name `PORTFOLIO_KV` → the namespace you created.
+3b. **R2** (photo storage): R2 → Create bucket (call it `portfolio-photos`;
+   free tier is 10 GB). Then Pages project → Settings → Bindings → add
+   **R2 bucket**: variable name `PHOTOS` → that bucket.
 4. **Secrets**: Pages project → Settings → Environment variables → add
    `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` (prod app values) and
    `SESSION_SECRET` (fresh `openssl rand -hex 32`) — mark them as secret.
 5. **Domain**: Pages project → Custom domains → add `russl.dev`
    (DNS is already on Cloudflare, so it's one click to confirm).
+   For the photo gallery, also add `photography.russl.dev` as a second
+   custom domain on the same project — a middleware serves the gallery
+   at that subdomain's root (it also always lives at /photography).
 6. Don't enable "Bot Fight Mode" / "Under Attack Mode" for the zone —
    that's what causes the browser-check interstitial.
 
