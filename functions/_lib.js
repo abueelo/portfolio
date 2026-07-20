@@ -60,3 +60,22 @@ export function randomHex(bytes = 16) {
   const a = crypto.getRandomValues(new Uint8Array(bytes));
   return [...a].map(b => b.toString(16).padStart(2, '0')).join('');
 }
+
+export function newImageId() {
+  return Date.now().toString(36) + '-' + randomHex(4);
+}
+
+export function sniffImage(buf) {
+  const b = new Uint8Array(buf);
+  if (b.length < 12) return null;
+  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
+  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
+      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp';
+  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'image/gif';
+  return null;
+}
+
+export function validImageId(id) {
+  return typeof id === 'string' && /^[a-z0-9-]{1,40}$/.test(id);
+}

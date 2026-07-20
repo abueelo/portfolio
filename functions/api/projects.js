@@ -1,8 +1,12 @@
-import { requireOwner, json } from '../_lib.js';
+import { requireOwner, json, validImageId } from '../_lib.js';
 
 const KEY = 'projects';
 const MAX_PROJECTS = 30;
-const MAX_LEN = { name: 100, url: 300, language: 60, homepage: 300, description: 2000, linkUrl: 300, linkText: 40 };
+const MAX_IMAGES = 10;
+const MAX_LEN = {
+  name: 100, url: 300, language: 60, homepage: 300, description: 2000,
+  linkUrl: 300, linkText: 40, details: 4000,
+};
 
 export async function onRequestGet({ env }) {
   const projects = await env.PORTFOLIO_KV.get(KEY, 'json');
@@ -24,7 +28,12 @@ export async function onRequestPut({ request, env }) {
     return json({ error: 'expected an array of projects' }, { status: 400 });
   }
 
+  const old = (await env.PORTFOLIO_KV.get(KEY, 'json')) || [];
+  const oldImageIds = new Set();
+  old.forEach(p => (p.images || []).forEach(id => oldImageIds.add(id)));
+
   const clean = [];
+  const newImageIds = new Set();
   for (const p of body) {
     if (!p || typeof p.name !== 'string' || typeof p.url !== 'string') {
       return json({ error: 'each project needs a name and url' }, { status: 400 });
@@ -40,6 +49,15 @@ export async function onRequestPut({ request, env }) {
     if (linkUrl && !/^https?:\/\//.test(linkUrl)) {
       return json({ error: 'custom links must start with http(s)://' }, { status: 400 });
     }
+
+    const images = Array.isArray(p.images) ? p.images.slice(0, MAX_IMAGES) : [];
+    for (const id of images) {
+      if (!validImageId(id)) {
+        return json({ error: 'invalid image reference' }, { status: 400 });
+      }
+      newImageIds.add(id);
+    }
+
     clean.push({
       name: p.name.slice(0, MAX_LEN.name),
       url: p.url.slice(0, MAX_LEN.url),
@@ -49,7 +67,13 @@ export async function onRequestPut({ request, env }) {
       description: field('description'),
       linkUrl,
       linkText: field('linkText'),
+      details: field('details'),
+      images,
     });
+  }
+
+  for (const id of oldImageIds) {
+    if (!newImageIds.has(id)) await env.PHOTOS.delete('photo-' + id);
   }
 
   await env.PORTFOLIO_KV.put(KEY, JSON.stringify(clean));

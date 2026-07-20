@@ -1,20 +1,9 @@
-import { requireOwner, json, randomHex } from '../_lib.js';
+import { requireOwner, json, newImageId, sniffImage } from '../_lib.js';
 
 const KEY = 'photos';
 const MAX_BYTES = 15 * 1024 * 1024;
 const MAX_ROWS = 200;
 const MAX_LEN = { title: 120, location: 120, taken: 60 };
-
-function sniff(buf) {
-  const b = new Uint8Array(buf);
-  if (b.length < 12) return null;
-  if (b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
-  if (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47) return 'image/png';
-  if (b[0] === 0x52 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x46 &&
-      b[8] === 0x57 && b[9] === 0x45 && b[10] === 0x42 && b[11] === 0x50) return 'image/webp';
-  if (b[0] === 0x47 && b[1] === 0x49 && b[2] === 0x46 && b[3] === 0x38) return 'image/gif';
-  return null;
-}
 
 export async function onRequestGet({ env }) {
   const photos = await env.PORTFOLIO_KV.get(KEY, 'json');
@@ -30,7 +19,7 @@ export async function onRequestPost({ request, env }) {
   if (buf.byteLength === 0 || buf.byteLength > MAX_BYTES) {
     return json({ error: 'photos must be between 1 byte and 15 MB' }, { status: 400 });
   }
-  const type = sniff(buf);
+  const type = sniffImage(buf);
   if (!type) {
     return json({ error: 'only jpeg, png, webp or gif files are accepted' }, { status: 400 });
   }
@@ -40,7 +29,7 @@ export async function onRequestPost({ request, env }) {
     return json({ error: 'photo limit reached' }, { status: 400 });
   }
 
-  const id = Date.now().toString(36) + '-' + randomHex(4);
+  const id = newImageId();
   await env.PHOTOS.put('photo-' + id, buf, { httpMetadata: { contentType: type } });
 
   const entry = { id, title: null, location: null, taken: null, type, size: buf.byteLength };

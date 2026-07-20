@@ -170,7 +170,95 @@
   <p><span aria-hidden="true">☼ </span><a class="edit-link" href="/edit"><span class="swap">abueelo</span></a> · <span id="year">1970</span><span aria-hidden="true"> ☼</span></p>
 </footer>
 
+<div id="project-modal" class="modal-overlay" hidden>
+  <div class="modal-window">
+    <div class="modal-titlebar">
+      <span class="modal-title"><span class="bracket" aria-hidden="true">[ </span><span id="modal-title-text"></span><span class="bracket" aria-hidden="true"> ]</span></span>
+      <button type="button" class="modal-close" aria-label="close">×</button>
+    </div>
+    <div class="modal-body" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
+      <div class="modal-images" id="modal-images"></div>
+      <p class="modal-details" id="modal-details"></p>
+    </div>
+  </div>
+</div>
+
 <script>
+  var projectModal = document.getElementById('project-modal');
+  var projectWin = projectModal.querySelector('.modal-window');
+  var projectTitlebar = projectModal.querySelector('.modal-titlebar');
+  var projectClose = projectModal.querySelector('.modal-close');
+  var projectLastFocused = null;
+
+  function openProjectModal(p) {
+    projectLastFocused = document.activeElement;
+    document.getElementById('modal-title-text').textContent = p.name.toLowerCase();
+    var imgs = document.getElementById('modal-images');
+    imgs.textContent = '';
+    (p.images || []).forEach(function (id) {
+      var img = document.createElement('img');
+      img.src = '/api/photo/' + id;
+      img.alt = '';
+      img.loading = 'lazy';
+      imgs.appendChild(img);
+    });
+    document.getElementById('modal-details').textContent = p.details || '';
+    projectWin.style.left = '';
+    projectWin.style.top = '';
+    projectWin.style.transform = '';
+    projectModal.hidden = false;
+    document.body.style.overflow = 'hidden';
+    projectClose.focus();
+  }
+
+  function closeProjectModal() {
+    projectModal.hidden = true;
+    document.body.style.overflow = '';
+    if (projectLastFocused && projectLastFocused.focus) projectLastFocused.focus();
+  }
+
+  projectClose.addEventListener('click', closeProjectModal);
+  projectModal.addEventListener('click', function (e) {
+    if (e.target === projectModal) closeProjectModal();
+  });
+  document.addEventListener('keydown', function (e) {
+    if (!projectModal.hidden && e.key === 'Escape') closeProjectModal();
+  });
+
+  var projectDrag = null;
+  function startProjectDrag(x, y) {
+    var rect = projectWin.getBoundingClientRect();
+    projectWin.style.left = rect.left + 'px';
+    projectWin.style.top = rect.top + 'px';
+    projectWin.style.transform = 'none';
+    projectDrag = { dx: x - rect.left, dy: y - rect.top };
+  }
+  function moveProjectDrag(x, y) {
+    if (!projectDrag) return;
+    var maxX = Math.max(0, window.innerWidth - projectWin.offsetWidth);
+    var maxY = Math.max(0, window.innerHeight - projectWin.offsetHeight);
+    projectWin.style.left = Math.min(Math.max(0, x - projectDrag.dx), maxX) + 'px';
+    projectWin.style.top = Math.min(Math.max(0, y - projectDrag.dy), maxY) + 'px';
+  }
+  projectTitlebar.addEventListener('mousedown', function (e) {
+    if (e.target === projectClose) return;
+    startProjectDrag(e.clientX, e.clientY);
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', function (e) { moveProjectDrag(e.clientX, e.clientY); });
+  window.addEventListener('mouseup', function () { projectDrag = null; });
+  projectTitlebar.addEventListener('touchstart', function (e) {
+    if (e.target === projectClose) return;
+    var t = e.touches[0];
+    startProjectDrag(t.clientX, t.clientY);
+  }, { passive: true });
+  window.addEventListener('touchmove', function (e) {
+    if (!projectDrag) return;
+    var t = e.touches[0];
+    moveProjectDrag(t.clientX, t.clientY);
+  }, { passive: true });
+  window.addEventListener('touchend', function () { projectDrag = null; });
+
   fetch('/api/projects').then(function (r) { return r.json(); }).then(function (projects) {
     if (!Array.isArray(projects) || projects.length === 0) return;
     var section = document.getElementById('projects');
@@ -225,6 +313,15 @@
         extra.href = extraUrl;
         extra.textContent = (p.linkUrl && p.linkText) || 'live';
         links.appendChild(extra);
+      }
+      if (p.details || (Array.isArray(p.images) && p.images.length)) {
+        links.appendChild(document.createTextNode(' · '));
+        var more = document.createElement('button');
+        more.type = 'button';
+        more.className = 'link-button';
+        more.textContent = 'more';
+        more.addEventListener('click', function () { openProjectModal(p); });
+        links.appendChild(more);
       }
       article.appendChild(links);
       section.appendChild(article);

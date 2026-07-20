@@ -158,6 +158,28 @@
     return wrap;
   }
 
+  function projectImgItem(id) {
+    var li = document.createElement('li');
+    li.className = 'proj-img-item';
+    li.dataset.id = id;
+    var img = document.createElement('img');
+    img.className = 'photo-thumb';
+    img.src = '/api/photo/' + id;
+    img.alt = '';
+    var rm = document.createElement('button');
+    rm.type = 'button';
+    rm.className = 'mv';
+    rm.textContent = '×';
+    rm.setAttribute('aria-label', 'remove image');
+    rm.addEventListener('click', function () {
+      if (!confirm('Remove this image? It will be gone once you save.')) return;
+      li.remove();
+    });
+    li.appendChild(img);
+    li.appendChild(rm);
+    return li;
+  }
+
   function repoRow(repo, selected, saved) {
     saved = saved || {};
     var li = document.createElement('li');
@@ -186,6 +208,7 @@
     head.appendChild(controls(li, repo.name, false));
 
     var ta = document.createElement('textarea');
+    ta.className = 'p-description';
     ta.rows = 2;
     ta.placeholder = repo.blurb || 'description shown on the portfolio…';
     ta.value = saved.description || '';
@@ -197,9 +220,81 @@
     lt.maxLength = 40;
     linkRow.appendChild(lt);
 
+    var more = document.createElement('details');
+    more.className = 'project-more';
+    var summary = document.createElement('summary');
+    summary.textContent = '+ in-depth details & images';
+    more.appendChild(summary);
+    more.addEventListener('toggle', function () {
+      summary.textContent = (more.open ? '− ' : '+ ') + 'in-depth details & images';
+    });
+
+    var moreHint = document.createElement('p');
+    moreHint.className = 'hint';
+    moreHint.textContent = 'shown in a popup window when someone clicks the project title';
+    more.appendChild(moreHint);
+
+    var detailsTa = document.createElement('textarea');
+    detailsTa.className = 'p-details';
+    detailsTa.rows = 5;
+    detailsTa.placeholder = "a longer write-up — design decisions, challenges, what you'd do differently…";
+    detailsTa.value = saved.details || '';
+    more.appendChild(detailsTa);
+
+    var imgList = document.createElement('ul');
+    imgList.className = 'project-img-list';
+    (saved.images || []).forEach(function (id) { imgList.appendChild(projectImgItem(id)); });
+    more.appendChild(imgList);
+
+    var imgControls = document.createElement('p');
+    imgControls.className = 'cv-controls';
+    var imgFile = document.createElement('input');
+    imgFile.type = 'file';
+    imgFile.className = 'p-img-file';
+    imgFile.accept = 'image/*';
+    imgFile.multiple = true;
+    var imgUpload = document.createElement('button');
+    imgUpload.type = 'button';
+    imgUpload.className = 'add';
+    imgUpload.textContent = '[ upload ]';
+    var imgStatus = document.createElement('span');
+    imgStatus.className = 'hint';
+    imgControls.appendChild(imgFile);
+    imgControls.appendChild(imgUpload);
+    imgControls.appendChild(imgStatus);
+    more.appendChild(imgControls);
+
+    imgUpload.addEventListener('click', function () {
+      var files = [].slice.call(imgFile.files);
+      if (!files.length) { imgStatus.textContent = 'choose some images first.'; return; }
+      var done = 0;
+      var chain = Promise.resolve();
+      files.forEach(function (file) {
+        chain = chain.then(function () {
+          imgStatus.textContent = 'uploading ' + (done + 1) + '/' + files.length + '…';
+          return resizePhoto(file).then(function (blob) {
+            return fetch('/api/project-images', { method: 'POST', body: blob });
+          }).then(function (res) {
+            return res.json().then(function (b) {
+              if (!res.ok) throw new Error(b.error || 'upload failed');
+              imgList.appendChild(projectImgItem(b.id));
+              done++;
+            });
+          });
+        });
+      });
+      chain.then(function () {
+        imgStatus.textContent = '☼ uploaded ' + done + ' image' + (done === 1 ? '' : 's');
+        imgFile.value = '';
+      }).catch(function (err) {
+        imgStatus.textContent = 'upload failed after ' + done + ': ' + err.message;
+      });
+    });
+
     li.appendChild(head);
     li.appendChild(ta);
     li.appendChild(linkRow);
+    li.appendChild(more);
     return li;
   }
 
@@ -395,9 +490,13 @@
         language: repo.language,
         homepage: repo.homepage,
         blurb: repo.blurb,
-        description: row.querySelector('textarea').value.trim(),
+        description: row.querySelector('.p-description').value.trim(),
         linkUrl: val(row, 'link-url'),
         linkText: val(row, 'link-text'),
+        details: row.querySelector('.p-details').value.trim(),
+        images: [].map.call(row.querySelectorAll('.project-img-list li'), function (li) {
+          return li.dataset.id;
+        }),
       });
     });
 
