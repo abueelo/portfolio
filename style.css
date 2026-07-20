@@ -441,26 +441,34 @@ section h2 .bracket {
 
 /* ── footer ──────────────────────────────────────────────── */
 footer {
-  position: relative;
   margin-top: 2.75rem;
   text-align: center;
   color: var(--dim);
   font-size: 0.85rem;
 }
 
-/* the quiet way in — tucked into the footer's bottom-right corner */
+/* the quiet way in — the footer's "abueelo" opens the overseer console
+   and reads "edit" on hover (fixed width so the line doesn't shift) */
 .edit-link {
-  position: absolute;
-  right: 0;
-  bottom: 0;
   color: var(--dim);
-  font-size: 0.8rem;
+  display: inline-block;
+  min-width: 7ch;
+  text-align: center;
+}
+
+.edit-link:hover .swap,
+.edit-link:focus-visible .swap {
+  display: none;
+}
+
+.edit-link:hover::after,
+.edit-link:focus-visible::after {
+  content: "edit";
 }
 
 .edit-link:hover,
 .edit-link:focus-visible {
   color: var(--amber);
-  text-decoration: none;
 }
 
 .social {
