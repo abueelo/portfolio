@@ -254,15 +254,14 @@ section h2 .bracket {
   margin: 0;
 }
 
-.photo a {
-  display: block;
-}
-
 .photo img {
   display: block;
   width: 100%;
   height: auto;
   border: 1px solid var(--border);
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-drag: none;
 }
 
 .photo figcaption {

@@ -67,14 +67,12 @@
       var fig = document.createElement('figure');
       fig.className = 'photo';
 
-      var link = document.createElement('a');
-      link.href = '/api/photo/' + p.id;
       var img = document.createElement('img');
       img.src = '/api/photo/' + p.id;
       img.loading = 'lazy';
       img.alt = p.title || 'photograph';
-      link.appendChild(img);
-      fig.appendChild(link);
+      img.draggable = false;
+      fig.appendChild(img);
 
       var cap = document.createElement('figcaption');
       var glyph = document.createElement('span');
