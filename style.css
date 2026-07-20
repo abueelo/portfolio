@@ -441,15 +441,20 @@ section h2 .bracket {
 
 /* ── footer ──────────────────────────────────────────────── */
 footer {
+  position: relative;
   margin-top: 2.75rem;
   text-align: center;
   color: var(--dim);
   font-size: 0.85rem;
 }
 
-/* the quiet way in — footer ☼ links to the overseer console */
+/* the quiet way in — tucked into the footer's bottom-right corner */
 .edit-link {
+  position: absolute;
+  right: 0;
+  bottom: 0;
   color: var(--dim);
+  font-size: 0.8rem;
 }
 
 .edit-link:hover,
