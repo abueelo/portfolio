@@ -102,7 +102,7 @@ a:focus-visible {
 nav {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem 2.5ch;
+  gap: 0.5rem 2ch;
 }
 
 nav a {
@@ -136,6 +136,12 @@ nav .key {
 
 #theme-toggle .key {
   color: var(--cyan);
+}
+
+#theme-toggle .mode {
+  display: inline-block;
+  min-width: 5ch;
+  text-align: left;
 }
 
 section {
