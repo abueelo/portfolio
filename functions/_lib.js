@@ -1,4 +1,3 @@
-// shared helpers for the edit-page API functions
 
 export const OWNER = 'abueelo';
 const SESSION_DAYS = 7;
@@ -13,8 +12,6 @@ async function hmac(secret, message) {
   return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// `Secure` cookies are refused by some browsers (Safari) on plain-http
-// localhost, so only mark them Secure when actually served over https
 export function secureFlag(request) {
   return new URL(request.url).protocol === 'https:' ? ' Secure;' : '';
 }
@@ -36,7 +33,6 @@ export function getCookie(request, name) {
   return null;
 }
 
-// returns the logged-in owner's login, or null
 export async function sessionLogin(request, env) {
   const raw = getCookie(request, 'session');
   if (!raw) return null;

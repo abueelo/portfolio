@@ -1,14 +1,12 @@
-/* ── palette ─────────────────────────────────────────────── */
 :root {
-  --bg:     #1b1b18;  /* warm near-black, not pure black */
-  --fg:     #b8b5a9;  /* soft warm grey body text */
-  --dim:    #6e6b60;  /* metadata, labels, decorations */
-  --border: #3a3a34;  /* section frames */
-  --amber:  #c9a25e;  /* links, highlights */
-  --cyan:   #7a9e9f;  /* secondary accent, used sparingly */
+  --bg:     #1b1b18;
+  --fg:     #b8b5a9;
+  --dim:    #6e6b60;
+  --border: #3a3a34;
+  --amber:  #c9a25e;
+  --cyan:   #7a9e9f;
 }
 
-/* light mode — warm paper, same muted spirit */
 :root[data-theme="light"] {
   --bg:     #e9e5d8;
   --fg:     #4a473d;
@@ -18,7 +16,6 @@
   --cyan:   #46707a;
 }
 
-/* ── base ────────────────────────────────────────────────── */
 * {
   margin: 0;
   padding: 0;
@@ -70,7 +67,6 @@ a:focus-visible {
   white-space: nowrap;
 }
 
-/* ── header ──────────────────────────────────────────────── */
 .name {
   color: var(--fg);
   font-size: min(1rem, calc((100vw - 3rem) / 30));
@@ -133,7 +129,6 @@ nav .key {
   color: var(--cyan);
 }
 
-/* ── sections ────────────────────────────────────────────── */
 section {
   position: relative;
   border: 1px solid var(--border);
@@ -162,7 +157,6 @@ section h2 .bracket {
   color: var(--dim);
 }
 
-/* ── projects ────────────────────────────────────────────── */
 .project + .project {
   margin-top: 1.75rem;
 }
@@ -219,7 +213,6 @@ section h2 .bracket {
   color: var(--dim);
 }
 
-/* ── history (education / employment, from /edit) ────────── */
 .hist-row {
   display: flex;
   gap: 2ch;
@@ -235,7 +228,6 @@ section h2 .bracket {
   min-width: 12ch;
 }
 
-/* ── contact ─────────────────────────────────────────────── */
 .contact-list {
   list-style: none;
 }
@@ -246,7 +238,6 @@ section h2 .bracket {
   color: var(--dim);
 }
 
-/* ── edit page (overseer console) ────────────────────────── */
 .hint {
   color: var(--dim);
   font-size: 0.85rem;
@@ -469,7 +460,6 @@ section h2 .bracket {
   margin-top: 1.25rem;
 }
 
-/* ── footer ──────────────────────────────────────────────── */
 footer {
   margin-top: 2.75rem;
   text-align: center;
@@ -477,8 +467,6 @@ footer {
   font-size: 0.85rem;
 }
 
-/* the quiet way in — the footer's "abueelo" opens the overseer console
-   and reads "edit" on hover (fixed width so the line doesn't shift) */
 .edit-link {
   color: var(--dim);
   display: inline-block;
@@ -524,7 +512,6 @@ footer {
 }
 
 .social pre {
-  /* line-height 1.2 × char width 0.6em keeps the half-block pixels square */
   font-size: 0.3rem;
   line-height: 1.2;
   transition: color 0.2s ease;
@@ -534,7 +521,6 @@ footer {
   font-size: 0.8rem;
 }
 
-/* ── entrance ────────────────────────────────────────────── */
 header,
 section,
 footer {
@@ -566,14 +552,12 @@ footer { animation-delay: 0.32s; }
   }
 }
 
-/* ── wide screens ────────────────────────────────────────── */
 @media (min-width: 1000px) {
   body {
     max-width: 1280px;
     padding: 3.5rem 3rem 2.5rem;
   }
 
-  /* nav sits in the header's right edge, level with the tagline */
   header {
     position: relative;
   }
@@ -585,7 +569,6 @@ footer { animation-delay: 0.32s; }
     margin-top: 0;
   }
 
-  /* about + contact share a row; projects span the full width */
   main.home {
     display: grid;
     grid-template-areas:
@@ -604,10 +587,8 @@ footer { animation-delay: 0.32s; }
   #contact { grid-area: contact; }
   #projects { grid-area: projects; }
 
-  /* JS-inserted history box spans the full width below projects */
   #history { grid-column: 1 / -1; }
 
-  /* projects flow into two columns */
   #projects {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -624,7 +605,6 @@ footer { animation-delay: 0.32s; }
   }
 }
 
-/* ── small screens ───────────────────────────────────────── */
 @media (max-width: 480px) {
   body {
     padding: 2rem 1rem 1.5rem;

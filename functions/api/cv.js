@@ -2,7 +2,7 @@ import { requireOwner, json } from '../_lib.js';
 
 const DATA_KEY = 'cv-file';
 const META_KEY = 'cv-meta';
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+const MAX_BYTES = 10 * 1024 * 1024;
 
 export async function onRequestGet({ request, env }) {
   const meta = await env.PORTFOLIO_KV.get(META_KEY, 'json');

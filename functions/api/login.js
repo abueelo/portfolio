@@ -7,7 +7,6 @@ export async function onRequestGet({ request, env }) {
   authorize.searchParams.set('client_id', env.GITHUB_CLIENT_ID);
   authorize.searchParams.set('redirect_uri', `${origin}/api/callback`);
   authorize.searchParams.set('state', state);
-  // no scope: we only need the public identity of whoever logs in
 
   return new Response(null, {
     status: 302,

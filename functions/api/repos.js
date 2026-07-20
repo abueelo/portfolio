@@ -1,7 +1,7 @@
 import { OWNER, requireOwner, json } from '../_lib.js';
 
 const CACHE_KEY = 'repos-cache';
-const CACHE_TTL = 300; // seconds
+const CACHE_TTL = 300;
 
 export async function onRequestGet({ request, env }) {
   if (!(await requireOwner(request, env))) {
