@@ -316,23 +316,36 @@ section h2 .bracket {
   overflow-y: auto;
 }
 
-.modal-images {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.modal-images img {
+.modal-main-image img {
   display: block;
-  width: 100%;
+  max-width: 100%;
+  max-height: 260px;
+  width: auto;
   height: auto;
+  margin: 0 auto 1rem;
   border: 1px solid var(--border);
 }
 
 .modal-details {
-  white-space: pre-wrap;
   line-height: 1.6;
+}
+
+.modal-details-text {
+  white-space: pre-wrap;
+}
+
+.modal-details-text + .modal-details-text {
+  margin-top: 0.9rem;
+}
+
+.modal-inline-img {
+  display: block;
+  max-width: 100%;
+  max-height: 180px;
+  width: auto;
+  height: auto;
+  margin: 0.9rem auto;
+  border: 1px solid var(--border);
 }
 
 @media (max-width: 480px) {
@@ -507,6 +520,17 @@ section h2 .bracket {
 .proj-img-item .photo-thumb {
   width: 6rem;
   height: 4rem;
+}
+
+.proj-img-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75ch;
+}
+
+.proj-img-label {
+  color: var(--dim);
+  font-size: 0.8rem;
 }
 
 .project-more .cv-controls {

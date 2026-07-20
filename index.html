@@ -177,8 +177,8 @@
       <button type="button" class="modal-close" aria-label="close">×</button>
     </div>
     <div class="modal-body" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
-      <div class="modal-images" id="modal-images"></div>
-      <p class="modal-details" id="modal-details"></p>
+      <div class="modal-main-image" id="modal-main-image"></div>
+      <div class="modal-details" id="modal-details"></div>
     </div>
   </div>
 </div>
@@ -193,16 +193,48 @@
   function openProjectModal(p) {
     projectLastFocused = document.activeElement;
     document.getElementById('modal-title-text').textContent = p.name.toLowerCase();
-    var imgs = document.getElementById('modal-images');
-    imgs.textContent = '';
-    (p.images || []).forEach(function (id) {
-      var img = document.createElement('img');
-      img.src = '/api/photo/' + id;
-      img.alt = '';
-      img.loading = 'lazy';
-      imgs.appendChild(img);
+
+    var mainSlot = document.getElementById('modal-main-image');
+    mainSlot.textContent = '';
+    var allImages = Array.isArray(p.images) ? p.images.slice() : [];
+    var mainImageId = allImages.shift();
+    if (mainImageId) {
+      var mainImg = document.createElement('img');
+      mainImg.src = '/api/photo/' + mainImageId;
+      mainImg.alt = '';
+      mainImg.loading = 'lazy';
+      mainSlot.appendChild(mainImg);
+    }
+
+    // remaining images drop in wherever the write-up has an [image] marker,
+    // in order; any left over just append at the end
+    var detailsEl = document.getElementById('modal-details');
+    detailsEl.textContent = '';
+    var chunks = (p.details || '').split(/\[image\]/i);
+    chunks.forEach(function (chunk, i) {
+      if (chunk.trim()) {
+        var para = document.createElement('p');
+        para.className = 'modal-details-text';
+        para.textContent = chunk.trim();
+        detailsEl.appendChild(para);
+      }
+      if (i < chunks.length - 1 && allImages.length) {
+        var inline = document.createElement('img');
+        inline.className = 'modal-inline-img';
+        inline.src = '/api/photo/' + allImages.shift();
+        inline.alt = '';
+        inline.loading = 'lazy';
+        detailsEl.appendChild(inline);
+      }
     });
-    document.getElementById('modal-details').textContent = p.details || '';
+    allImages.forEach(function (id) {
+      var extra = document.createElement('img');
+      extra.className = 'modal-inline-img';
+      extra.src = '/api/photo/' + id;
+      extra.alt = '';
+      extra.loading = 'lazy';
+      detailsEl.appendChild(extra);
+    });
     projectWin.style.left = '';
     projectWin.style.top = '';
     projectWin.style.transform = '';

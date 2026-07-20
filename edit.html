@@ -158,6 +158,13 @@
     return wrap;
   }
 
+  function relabelProjectImages(list) {
+    var items = list.querySelectorAll('.proj-img-item');
+    items.forEach(function (li, i) {
+      li.querySelector('.proj-img-label').textContent = i === 0 ? 'main' : String(i + 1);
+    });
+  }
+
   function projectImgItem(id) {
     var li = document.createElement('li');
     li.className = 'proj-img-item';
@@ -166,6 +173,8 @@
     img.className = 'photo-thumb';
     img.src = '/api/photo/' + id;
     img.alt = '';
+    var label = document.createElement('span');
+    label.className = 'proj-img-label';
     var rm = document.createElement('button');
     rm.type = 'button';
     rm.className = 'mv';
@@ -173,10 +182,17 @@
     rm.setAttribute('aria-label', 'remove image');
     rm.addEventListener('click', function () {
       if (!confirm('Remove this image? It will be gone once you save.')) return;
+      var list = li.parentNode;
       li.remove();
+      relabelProjectImages(list);
     });
+    var row = document.createElement('span');
+    row.className = 'proj-img-row';
+    row.appendChild(label);
+    row.appendChild(rm);
+
     li.appendChild(img);
-    li.appendChild(rm);
+    li.appendChild(row);
     return li;
   }
 
@@ -231,7 +247,9 @@
 
     var moreHint = document.createElement('p');
     moreHint.className = 'hint';
-    moreHint.textContent = 'shown in a popup window when someone clicks the project title';
+    moreHint.textContent = 'shown in a popup window when someone clicks the project title — ' +
+      'the first image below is the main image, shown at the top; type [image] anywhere ' +
+      'in the write-up to drop in the next one, in order';
     more.appendChild(moreHint);
 
     var detailsTa = document.createElement('textarea');
@@ -244,6 +262,7 @@
     var imgList = document.createElement('ul');
     imgList.className = 'project-img-list';
     (saved.images || []).forEach(function (id) { imgList.appendChild(projectImgItem(id)); });
+    relabelProjectImages(imgList);
     more.appendChild(imgList);
 
     var imgControls = document.createElement('p');
@@ -278,6 +297,7 @@
             return res.json().then(function (b) {
               if (!res.ok) throw new Error(b.error || 'upload failed');
               imgList.appendChild(projectImgItem(b.id));
+              relabelProjectImages(imgList);
               done++;
             });
           });
