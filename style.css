@@ -134,6 +134,7 @@ section {
   border: 1px solid var(--border);
   padding: 1.5rem 1.75rem 1.25rem;
   margin-top: 2.75rem;
+  scroll-margin-top: 2rem;
   transition: border-color 0.25s ease;
 }
 
