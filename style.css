@@ -76,17 +76,17 @@ a:focus-visible {
   user-select: none;
 }
 
-.name-row {
+.head-row {
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  align-items: flex-end;
-  gap: 1rem 4ch;
+  align-items: baseline;
+  gap: 0.75rem 4ch;
+  margin-top: 1rem;
 }
 
 .tagline {
   color: var(--dim);
-  margin-top: 1rem;
 }
 
 .cursor {
