@@ -13,12 +13,18 @@ async function hmac(secret, message) {
   return [...new Uint8Array(sig)].map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-export async function makeSessionCookie(env, login) {
+// `Secure` cookies are refused by some browsers (Safari) on plain-http
+// localhost, so only mark them Secure when actually served over https
+export function secureFlag(request) {
+  return new URL(request.url).protocol === 'https:' ? ' Secure;' : '';
+}
+
+export async function makeSessionCookie(request, env, login) {
   const expiry = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
   const payload = `${login}.${expiry}`;
   const sig = await hmac(env.SESSION_SECRET, payload);
   const maxAge = SESSION_DAYS * 24 * 60 * 60;
-  return `session=${payload}.${sig}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=${maxAge}`;
+  return `session=${payload}.${sig}; HttpOnly;${secureFlag(request)} SameSite=Lax; Path=/; Max-Age=${maxAge}`;
 }
 
 export function getCookie(request, name) {

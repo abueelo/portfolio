@@ -1,4 +1,4 @@
-import { OWNER, getCookie, makeSessionCookie } from '../_lib.js';
+import { OWNER, getCookie, makeSessionCookie, secureFlag } from '../_lib.js';
 
 function bounce(location, extraHeaders = {}) {
   return new Response(null, { status: 302, headers: { Location: location, ...extraHeaders } });
@@ -9,10 +9,13 @@ export async function onRequestGet({ request, env }) {
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   const savedState = getCookie(request, 'oauth_state');
-  const clearState = 'oauth_state=; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=0';
+  const clearState = `oauth_state=; HttpOnly;${secureFlag(request)} SameSite=Lax; Path=/; Max-Age=0`;
 
   if (!code || !state || !savedState || state !== savedState) {
-    return bounce('/edit#error', { 'Set-Cookie': clearState });
+    console.error('[callback] state check failed', {
+      hasCode: !!code, hasState: !!state, hasStateCookie: !!savedState, match: state === savedState,
+    });
+    return bounce('/edit#error-state', { 'Set-Cookie': clearState });
   }
 
   const tokenRes = await fetch('https://github.com/login/oauth/access_token', {
@@ -25,24 +28,31 @@ export async function onRequestGet({ request, env }) {
       redirect_uri: `${url.origin}/api/callback`,
     }),
   });
-  const token = (await tokenRes.json()).access_token;
-  if (!token) return bounce('/edit#error', { 'Set-Cookie': clearState });
+  const tokenBody = await tokenRes.json();
+  if (!tokenBody.access_token) {
+    console.error('[callback] token exchange failed:', JSON.stringify(tokenBody));
+    return bounce('/edit#error-token', { 'Set-Cookie': clearState });
+  }
 
   const userRes = await fetch('https://api.github.com/user', {
     headers: {
-      Authorization: `Bearer ${token}`,
+      Authorization: `Bearer ${tokenBody.access_token}`,
       Accept: 'application/vnd.github+json',
       'User-Agent': 'russl-dev-portfolio',
     },
   });
-  const login = (await userRes.json()).login;
+  const userBody = await userRes.json();
+  if (!userBody.login) {
+    console.error('[callback] user lookup failed:', JSON.stringify(userBody));
+    return bounce('/edit#error-user', { 'Set-Cookie': clearState });
+  }
 
-  if (login !== OWNER) {
+  if (userBody.login !== OWNER) {
     return bounce('/edit#denied', { 'Set-Cookie': clearState });
   }
 
   const headers = new Headers({ Location: '/edit' });
   headers.append('Set-Cookie', clearState);
-  headers.append('Set-Cookie', await makeSessionCookie(env, login));
+  headers.append('Set-Cookie', await makeSessionCookie(request, env, userBody.login));
   return new Response(null, { status: 302, headers });
 }

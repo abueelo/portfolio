@@ -22,7 +22,7 @@
   <section id="login-box" hidden>
     <h2><span class="bracket" aria-hidden="true">[ </span>identify yourself<span class="bracket" aria-hidden="true"> ]</span></h2>
     <p>this console decides which projects appear on the portfolio.</p>
-    <p id="login-error" class="error" hidden>the login attempt failed — try again.</p>
+    <p id="login-error" class="error" hidden></p>
     <p class="links"><span class="glyph" aria-hidden="true">»</span> <a href="/api/login">login with github</a></p>
   </section>
 
@@ -168,7 +168,16 @@
   fetch('/api/me').then(function (r) { return r.json(); }).then(function (me) {
     if (!me.authed) {
       if (location.hash === '#denied') { show('denied-box'); return; }
-      $('login-error').hidden = location.hash !== '#error';
+      var errors = {
+        '#error-state': 'login failed: the browser lost track of the attempt. use http://localhost:8788 (not 127.0.0.1), allow cookies, and try again.',
+        '#error-token': 'login failed: github rejected the app credentials — check GITHUB_CLIENT_ID / GITHUB_CLIENT_SECRET (server log has details).',
+        '#error-user': 'login failed: could not read your github profile — try again (server log has details).',
+        '#error': 'the login attempt failed — try again.'
+      };
+      if (errors[location.hash]) {
+        $('login-error').textContent = errors[location.hash];
+        $('login-error').hidden = false;
+      }
       show('login-box');
       return;
     }

@@ -1,4 +1,4 @@
-import { randomHex } from '../_lib.js';
+import { randomHex, secureFlag } from '../_lib.js';
 
 export async function onRequestGet({ request, env }) {
   const state = randomHex();
@@ -13,7 +13,7 @@ export async function onRequestGet({ request, env }) {
     status: 302,
     headers: {
       Location: authorize.toString(),
-      'Set-Cookie': `oauth_state=${state}; HttpOnly; Secure; SameSite=Lax; Path=/; Max-Age=600`,
+      'Set-Cookie': `oauth_state=${state}; HttpOnly;${secureFlag(request)} SameSite=Lax; Path=/; Max-Age=600`,
     },
   });
 }
