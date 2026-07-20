@@ -24,7 +24,7 @@
   <nav aria-label="sections">
     <a href="#about"><span class="key" aria-hidden="true">[a]</span> about</a>
     <a href="#projects"><span class="key" aria-hidden="true">[p]</span> projects</a>
-    <a href="#contact"><span class="key" aria-hidden="true">[c]</span> contact</a>
+    <a href="#contact"><span class="key" aria-hidden="true">[l]</span> links</a>
     <button id="theme-toggle" type="button" aria-label="toggle light/dark theme">
       <span class="key" aria-hidden="true">[t]</span> <span class="mode">light</span>
     </button>
@@ -134,7 +134,7 @@
   </section>
 
   <section id="contact">
-    <h2><span class="bracket" aria-hidden="true">[ </span>contact<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <h2><span class="bracket" aria-hidden="true">[ </span>links<span class="bracket" aria-hidden="true"> ]</span></h2>
     <ul class="contact-list">
       <li><span class="label">email</span> <a class="email" href="#contact">thom [at] russl [dot] dev</a></li>
       <li><span class="label">github</span> <a href="https://github.com/abueelo">github.com/abueelo</a></li>
@@ -209,17 +209,18 @@
       h3.appendChild(glyph); h3.appendChild(name); h3.appendChild(fill); h3.appendChild(lang);
       article.appendChild(h3);
 
-      if (p.blurb) {
-        var blurb = document.createElement('p');
-        blurb.className = 'repo-desc';
-        blurb.textContent = p.blurb;
-        article.appendChild(blurb);
-      }
+      // your own description replaces the github blurb; the blurb only
+      // shows as a fallback when you haven't written one
       if (p.description) {
         var desc = document.createElement('p');
         desc.className = 'desc';
         desc.textContent = p.description;
         article.appendChild(desc);
+      } else if (p.blurb) {
+        var blurb = document.createElement('p');
+        blurb.className = 'repo-desc';
+        blurb.textContent = p.blurb;
+        article.appendChild(blurb);
       }
 
       var links = document.createElement('p');
@@ -246,8 +247,14 @@
     });
   }).catch(function () { /* offline/file preview — baked list stays */ });
 
-  // hydrate about, contact rows, and the history box from /api/site
-  fetch('/api/site').then(function (r) { return r.json(); }).then(function (site) {
+  // hydrate about, link rows, cv, and the history box
+  Promise.all([
+    fetch('/api/site').then(function (r) { return r.json(); }),
+    fetch('/api/cv?info').then(function (r) { return r.json(); })
+      .catch(function () { return { exists: false }; }),
+  ]).then(function (results) {
+    var site = results[0] || {};
+    var cv = results[1] || {};
     if (site.about) {
       document.getElementById('about-text').textContent = site.about;
     }
@@ -275,6 +282,20 @@
         }
         list.appendChild(li);
       });
+    }
+
+    if (cv.exists) {
+      var cvLi = document.createElement('li');
+      var cvLabel = document.createElement('span');
+      cvLabel.className = 'label';
+      cvLabel.textContent = 'cv';
+      var cvLink = document.createElement('a');
+      cvLink.href = '/api/cv';
+      cvLink.textContent = 'download pdf';
+      cvLi.appendChild(cvLabel);
+      cvLi.appendChild(document.createTextNode(' '));
+      cvLi.appendChild(cvLink);
+      document.querySelector('.contact-list').appendChild(cvLi);
     }
 
     if (Array.isArray(site.history) && site.history.length) {
@@ -336,7 +357,7 @@
   document.addEventListener('keydown', function (e) {
     if (e.metaKey || e.ctrlKey || e.altKey) return;
     if (e.key === 't') { toggle.click(); return; }
-    var target = { a: 'about', p: 'projects', c: 'contact' }[e.key];
+    var target = { a: 'about', p: 'projects', l: 'contact' }[e.key];
     if (!target) return;
     var el = document.getElementById(target);
     var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;

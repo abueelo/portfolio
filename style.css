@@ -393,6 +393,36 @@ section h2 .bracket {
   margin-left: auto;
 }
 
+.cv-controls {
+  display: flex;
+  align-items: center;
+  gap: 2ch;
+  flex-wrap: wrap;
+}
+
+#cv-file {
+  font: inherit;
+  font-size: 0.85rem;
+  color: var(--dim);
+  max-width: 100%;
+}
+
+#cv-file::file-selector-button {
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--dim);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 0.1rem 1ch;
+  cursor: pointer;
+  margin-right: 1.5ch;
+}
+
+#cv-file::file-selector-button:hover {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
 .add {
   font: inherit;
   font-size: 0.85rem;

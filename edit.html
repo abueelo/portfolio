@@ -57,11 +57,23 @@
     </section>
 
     <section>
-      <h2><span class="bracket" aria-hidden="true">[ </span>contact<span class="bracket" aria-hidden="true"> ]</span></h2>
-      <p class="hint">rows in the contact box. url is optional — use mailto: for email addresses.
+      <h2><span class="bracket" aria-hidden="true">[ </span>links<span class="bracket" aria-hidden="true"> ]</span></h2>
+      <p class="hint">rows in the links box. url is optional — use mailto: for email addresses.
         the scraper-protected email row is built into the page and always stays first.</p>
       <ul id="contact-list-edit" class="edit-rows"></ul>
       <p><button type="button" class="add" id="contact-add">[ + add row ]</button></p>
+    </section>
+
+    <section>
+      <h2><span class="bracket" aria-hidden="true">[ </span>cv<span class="bracket" aria-hidden="true"> ]</span></h2>
+      <p class="hint">upload a pdf and a “cv · download pdf” row appears in the links box.</p>
+      <p id="cv-current">checking…</p>
+      <p class="cv-controls">
+        <input type="file" id="cv-file" accept="application/pdf">
+        <button type="button" class="add" id="cv-upload">[ upload ]</button>
+        <button type="button" class="add" id="cv-remove" hidden>[ remove ]</button>
+        <span id="cv-status" class="hint" role="status"></span>
+      </p>
     </section>
 
     <p class="save-row">
@@ -220,6 +232,50 @@
   $('hist-add').addEventListener('click', function () { $('hist-list').appendChild(histRow(null)); });
   $('contact-add').addEventListener('click', function () { $('contact-list-edit').appendChild(contactRow(null)); });
 
+  function loadCvInfo() {
+    fetch('/api/cv?info').then(function (r) { return r.json(); }).then(function (cv) {
+      if (cv.exists) {
+        $('cv-current').textContent = 'current: ' + cv.name + ' (' + Math.round(cv.size / 1024) + ' kb)';
+        $('cv-remove').hidden = false;
+      } else {
+        $('cv-current').textContent = 'no cv uploaded yet.';
+        $('cv-remove').hidden = true;
+      }
+    }).catch(function () { $('cv-current').textContent = 'could not check the cv.'; });
+  }
+
+  $('cv-upload').addEventListener('click', function () {
+    var file = $('cv-file').files[0];
+    var status = $('cv-status');
+    if (!file) { status.textContent = 'choose a pdf first.'; return; }
+    status.textContent = 'uploading…';
+    fetch('/api/cv', {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/pdf',
+        'X-Filename': encodeURIComponent(file.name),
+      },
+      body: file,
+    }).then(function (res) { return res.json().then(function (b) { return { ok: res.ok, body: b }; }); })
+      .then(function (r) {
+        if (!r.ok) throw new Error(r.body.error || 'upload failed');
+        status.textContent = '☼ uploaded';
+        $('cv-file').value = '';
+        loadCvInfo();
+      })
+      .catch(function (err) { status.textContent = 'upload failed: ' + err.message; });
+  });
+
+  $('cv-remove').addEventListener('click', function () {
+    var status = $('cv-status');
+    status.textContent = 'removing…';
+    fetch('/api/cv', { method: 'DELETE' }).then(function (res) {
+      if (!res.ok) throw new Error('http ' + res.status);
+      status.textContent = '☼ removed';
+      loadCvInfo();
+    }).catch(function (err) { status.textContent = 'remove failed: ' + err.message; });
+  });
+
   function val(row, cls) {
     var el = row.querySelector('.' + cls);
     return el ? el.value.trim() : '';
@@ -301,6 +357,7 @@
       fetch('/api/site').then(function (r) { return r.json(); }),
     ]).then(function (results) {
       buildEditor(results[0], results[1], results[2] || {});
+      loadCvInfo();
       show('editor');
     });
   }).catch(function () {
