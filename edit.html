@@ -419,14 +419,14 @@
       try {
         return parseExif(buf);
       } catch (e) {
-        return { title: null, camera: null, settings: null };
+        return { title: null, camera: null, settings: null, location: null, taken: null };
       }
     });
   }
 
   function parseExif(buf) {
     var view = new DataView(buf);
-    var empty = { title: null, camera: null, settings: null };
+    var empty = { title: null, camera: null, settings: null, location: null, taken: null };
     if (view.byteLength < 4 || view.getUint16(0) !== 0xFFD8) return empty;
 
     var offset = 2;
@@ -445,7 +445,7 @@
   }
 
   function readTiff(view, tiffStart) {
-    var empty = { title: null, camera: null, settings: null };
+    var empty = { title: null, camera: null, settings: null, location: null, taken: null };
     if (tiffStart + 8 > view.byteLength) return empty;
     var bom = view.getUint16(tiffStart);
     var little = bom === 0x4949;
@@ -489,12 +489,48 @@
       return tags;
     }
 
+    function readGpsCoord(ifdOffset) {
+      if (!ifdOffset || ifdOffset + 2 > view.byteLength) return null;
+      var count = u16(ifdOffset);
+      var latRef, lat, lonRef, lon;
+      for (var i = 0; i < count; i++) {
+        var entryOffset = ifdOffset + 2 + i * 12;
+        if (entryOffset + 12 > view.byteLength) break;
+        var tag = u16(entryOffset);
+        var type = u16(entryOffset + 2);
+        var num = u32(entryOffset + 4);
+        var valueOffset = entryOffset + 8;
+        if (tag === 1 && type === 2) latRef = ascii(valueOffset, num);
+        else if (tag === 2 && type === 5 && num === 3) {
+          var arrOffset = tiffStart + u32(valueOffset);
+          lat = [rational(arrOffset), rational(arrOffset + 8), rational(arrOffset + 16)];
+        } else if (tag === 3 && type === 2) lonRef = ascii(valueOffset, num);
+        else if (tag === 4 && type === 5 && num === 3) {
+          var arrOffset2 = tiffStart + u32(valueOffset);
+          lon = [rational(arrOffset2), rational(arrOffset2 + 8), rational(arrOffset2 + 16)];
+        }
+      }
+      if (!lat || !lon || !latRef || !lonRef) return null;
+      var latDec = (lat[0] + lat[1] / 60 + lat[2] / 3600) * (latRef === 'S' ? -1 : 1);
+      var lonDec = (lon[0] + lon[1] / 60 + lon[2] / 3600) * (lonRef === 'W' ? -1 : 1);
+      return Math.abs(latDec).toFixed(4) + '° ' + (latDec < 0 ? 'S' : 'N') + ', ' +
+        Math.abs(lonDec).toFixed(4) + '° ' + (lonDec < 0 ? 'W' : 'E');
+    }
+
     var ifd0Offset = u32(tiffStart + 4);
     var ifd0 = readIfd(tiffStart + ifd0Offset);
     var make = ifd0[0x010F] || '';
     var model = ifd0[0x0110] || '';
     var title = ifd0[0x010E] || null;
     var exifTags = ifd0[0x8769] ? readIfd(tiffStart + ifd0[0x8769]) : {};
+    var location = ifd0[0x8825] ? readGpsCoord(tiffStart + ifd0[0x8825]) : null;
+
+    var taken = null;
+    var dateMatch = exifTags[0x9003] && /^(\d{4}):(\d{2}):(\d{2})/.exec(exifTags[0x9003]);
+    if (dateMatch) {
+      var months = ['jan', 'feb', 'mar', 'apr', 'may', 'jun', 'jul', 'aug', 'sep', 'oct', 'nov', 'dec'];
+      taken = parseInt(dateMatch[3], 10) + ' ' + months[parseInt(dateMatch[2], 10) - 1] + ' ' + dateMatch[1];
+    }
 
     var camera = null;
     if (model) {
@@ -513,7 +549,10 @@
     }
     if (exifTags[0x8827]) parts.push('ISO ' + exifTags[0x8827]);
 
-    return { title: title, camera: camera, settings: parts.length ? parts.join(' · ') : null };
+    return {
+      title: title, camera: camera, settings: parts.length ? parts.join(' · ') : null,
+      location: location, taken: taken,
+    };
   }
 
   function titleFromFilename(name) {
@@ -616,6 +655,8 @@
               b.title = exif.title || titleFromFilename(file.name);
               b.camera = exif.camera;
               b.settings = exif.settings;
+              b.location = exif.location;
+              b.taken = exif.taken;
               $('photo-list').appendChild(photoRow(b));
               done++;
             });
