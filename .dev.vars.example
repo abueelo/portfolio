@@ -4,3 +4,6 @@ GITHUB_CLIENT_ID=your-dev-oauth-app-client-id
 GITHUB_CLIENT_SECRET=your-dev-oauth-app-client-secret
 # any long random string, e.g. run: openssl rand -hex 32
 SESSION_SECRET=change-me-to-something-long-and-random
+# optional: a GitHub personal access token (no scopes needed, just raises
+# the rate limit on /api/repos from 60/hr to 5000/hr). Works without it.
+GITHUB_API_TOKEN=

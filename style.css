@@ -347,6 +347,24 @@ section h2 .bracket {
   border: 1px solid var(--border);
 }
 
+.confirm-window {
+  width: min(420px, 90vw);
+}
+
+.confirm-window .modal-titlebar {
+  justify-content: flex-start;
+}
+
+#confirm-message {
+  line-height: 1.6;
+}
+
+.confirm-actions {
+  display: flex;
+  gap: 3ch;
+  margin-top: 1.25rem;
+}
+
 @media (max-width: 480px) {
   .modal-window {
     width: 92vw;
