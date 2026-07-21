@@ -415,20 +415,35 @@
   }
 
   function readExifCameraInfo(file) {
-    return file.slice(0, 131072).arrayBuffer().then(function (buf) {
+    return file.slice(0, 2097152).arrayBuffer().then(function (buf) {
       try {
         return parseExif(buf);
       } catch (e) {
-        return { title: null, camera: null, settings: null, gps: null, taken: null };
+        return emptyExif();
       }
     });
   }
 
+  function emptyExif() {
+    return { title: null, camera: null, settings: null, gps: null, taken: null };
+  }
+
   function parseExif(buf) {
     var view = new DataView(buf);
-    var empty = { title: null, camera: null, settings: null, gps: null, taken: null };
-    if (view.byteLength < 4 || view.getUint16(0) !== 0xFFD8) return empty;
+    if (view.byteLength < 8) return emptyExif();
 
+    var b16 = view.getUint16(0);
+    if (b16 === 0xFFD8) return parseJpegExif(view);
+    if (b16 === 0x4949 || b16 === 0x4D4D) {
+      var little = b16 === 0x4949;
+      if (view.getUint16(2, little) === 0x002A) return readTiff(view, 0);
+    }
+    if (view.getUint32(0) === 0x89504E47) return parsePngExif(view);
+    if (view.byteLength >= 12 && view.getUint32(4) === 0x66747970) return parseHeicExif(view);
+    return emptyExif();
+  }
+
+  function parseJpegExif(view) {
     var offset = 2;
     while (offset + 4 <= view.byteLength) {
       var marker = view.getUint16(offset);
@@ -441,11 +456,134 @@
       }
       offset += 2 + segLen;
     }
-    return empty;
+    return emptyExif();
+  }
+
+  function parsePngExif(view) {
+    var offset = 8;
+    while (offset + 8 <= view.byteLength) {
+      var length = view.getUint32(offset);
+      var type = view.getUint32(offset + 4);
+      if (type === 0x65584966) return readTiff(view, offset + 8);
+      offset += 8 + length + 4;
+    }
+    return emptyExif();
+  }
+
+  function parseHeicExif(view) {
+    function u32(o) { return view.getUint32(o); }
+    function u16(o) { return view.getUint16(o); }
+    function u8(o) { return view.getUint8(o); }
+    function readUint(o, size) {
+      if (size === 0) return [0, o];
+      var v = 0;
+      for (var i = 0; i < size; i++) v = v * 256 + u8(o + i);
+      return [v, o + size];
+    }
+    function fourcc(o) {
+      return String.fromCharCode(u8(o), u8(o + 1), u8(o + 2), u8(o + 3));
+    }
+
+    function findBox(start, end, wanted) {
+      var pos = start;
+      while (pos + 8 <= end) {
+        var size = u32(pos);
+        var type = fourcc(pos + 4);
+        var headerLen = 8;
+        if (size === 1) { size = u32(pos + 8) * 4294967296 + u32(pos + 12); headerLen = 16; }
+        if (size === 0) size = end - pos;
+        if (size < headerLen || pos + size > end) break;
+        if (type === wanted) return { start: pos, size: size, headerLen: headerLen };
+        pos += size;
+      }
+      return null;
+    }
+
+    try {
+      var meta = findBox(0, view.byteLength, 'meta');
+      if (!meta) return emptyExif();
+      var metaContentStart = meta.start + meta.headerLen + 4;
+      var metaEnd = meta.start + meta.size;
+
+      var iinf = findBox(metaContentStart, metaEnd, 'iinf');
+      var iloc = findBox(metaContentStart, metaEnd, 'iloc');
+      if (!iinf || !iloc) return emptyExif();
+
+      var pos = iinf.start + iinf.headerLen;
+      var iinfVersion = u8(pos);
+      pos += 4;
+      var entryCount;
+      if (iinfVersion === 0) { entryCount = u16(pos); pos += 2; }
+      else { entryCount = u32(pos); pos += 4; }
+
+      var exifItemId = null;
+      for (var i = 0; i < entryCount && pos < iinf.start + iinf.size; i++) {
+        var infeSize = u32(pos);
+        var infeVersion = u8(pos + 8);
+        var infePos = pos + 8 + 4;
+        var itemId, itemType;
+        if (infeVersion >= 2) {
+          if (infeVersion === 2) { itemId = u16(infePos); infePos += 2; }
+          else { itemId = u32(infePos); infePos += 4; }
+          infePos += 2;
+          itemType = fourcc(infePos);
+          if (itemType === 'Exif') { exifItemId = itemId; break; }
+        }
+        pos += infeSize;
+      }
+      if (exifItemId === null) return emptyExif();
+
+      pos = iloc.start + iloc.headerLen;
+      var ilocVersion = u8(pos);
+      pos += 4;
+      var sizesByte = u8(pos);
+      var offsetSize = sizesByte >> 4;
+      var lengthSize = sizesByte & 0xF;
+      pos += 1;
+      var sizesByte2 = u8(pos);
+      var baseOffsetSize = sizesByte2 >> 4;
+      var indexSize = sizesByte2 & 0xF;
+      pos += 1;
+      var itemCount;
+      if (ilocVersion < 2) { itemCount = u16(pos); pos += 2; }
+      else { itemCount = u32(pos); pos += 4; }
+
+      for (var j = 0; j < itemCount; j++) {
+        var itemId2;
+        if (ilocVersion < 2) { itemId2 = u16(pos); pos += 2; }
+        else { itemId2 = u32(pos); pos += 4; }
+        if (ilocVersion === 1 || ilocVersion === 2) pos += 2;
+        pos += 2;
+        var baseOffsetResult = readUint(pos, baseOffsetSize);
+        var baseOffset = baseOffsetResult[0];
+        pos = baseOffsetResult[1];
+        var extentCount = u16(pos);
+        pos += 2;
+        var firstExtentOffset = null;
+        for (var k = 0; k < extentCount; k++) {
+          if ((ilocVersion === 1 || ilocVersion === 2) && indexSize > 0) {
+            var idxResult = readUint(pos, indexSize);
+            pos = idxResult[1];
+          }
+          var extOffsetResult = readUint(pos, offsetSize);
+          pos = extOffsetResult[1];
+          var extLengthResult = readUint(pos, lengthSize);
+          pos = extLengthResult[1];
+          if (firstExtentOffset === null) firstExtentOffset = baseOffset + extOffsetResult[0];
+        }
+        if (itemId2 === exifItemId && firstExtentOffset !== null) {
+          var prefix = u32(firstExtentOffset);
+          return readTiff(view, firstExtentOffset + 4 + prefix);
+        }
+      }
+      return emptyExif();
+    } catch (e) {
+      return emptyExif();
+    }
   }
 
   function readTiff(view, tiffStart) {
-    var empty = { title: null, camera: null, settings: null, gps: null, taken: null };
+    var empty = emptyExif();
     if (tiffStart + 8 > view.byteLength) return empty;
     var bom = view.getUint16(tiffStart);
     var little = bom === 0x4949;
@@ -578,6 +716,7 @@
       var place = d.city || d.locality || d.principalSubdivision || null;
       if (!place) return formatCoords(gps.lat, gps.lon);
       if (d.countryCode === 'GB') return place;
+      if (d.countryCode === 'US') return place + ', USA';
       var country = d.countryName ? d.countryName.replace(/\s*\([^)]*\)\s*$/, '').trim() : null;
       return country ? place + ', ' + country : place;
     }).catch(function () {
