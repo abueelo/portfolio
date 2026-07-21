@@ -724,7 +724,28 @@
     });
   }
 
+  function isTiff(file) {
+    if (file.type === 'image/tiff' || file.type === 'image/tif') return true;
+    return /\.tiff?$/i.test(file.name || '');
+  }
+
+  function convertTiffOnServer(file) {
+    return file.arrayBuffer().then(function (buf) {
+      return fetch('/api/convert-tiff', { method: 'POST', body: buf }).then(function (res) {
+        if (!res.ok) {
+          return res.json().then(function (b) { throw new Error(b.error || 'tiff conversion failed'); });
+        }
+        var width = parseInt(res.headers.get('X-Image-Width'), 10);
+        var height = parseInt(res.headers.get('X-Image-Height'), 10);
+        return res.blob().then(function (blob) {
+          return { blob: blob, width: width, height: height };
+        });
+      });
+    });
+  }
+
   function resizePhoto(file) {
+    if (isTiff(file)) return convertTiffOnServer(file);
     return createImageBitmap(file).then(function (bmp) {
       var MAXD = 2400;
       var scale = Math.min(1, MAXD / Math.max(bmp.width, bmp.height));
