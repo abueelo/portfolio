@@ -725,12 +725,12 @@
   }
 
   function isAcceptedImage(file) {
-    if (file.type === 'image/jpeg' || file.type === 'image/png') return true;
-    return /\.(jpe?g|png)$/i.test(file.name || '');
+    if (file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/heic' || file.type === 'image/heif') return true;
+    return /\.(jpe?g|png|heic|heif)$/i.test(file.name || '');
   }
 
   function resizePhoto(file) {
-    if (!isAcceptedImage(file)) return Promise.reject(new Error('only jpg and png files are accepted'));
+    if (!isAcceptedImage(file)) return Promise.reject(new Error('only jpg, png, and heic files are accepted'));
     return createImageBitmap(file).then(function (bmp) {
       var MAXD = 2400;
       var scale = Math.min(1, MAXD / Math.max(bmp.width, bmp.height));
