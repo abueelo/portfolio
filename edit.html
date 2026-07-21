@@ -111,9 +111,58 @@
 
 </main>
 
+<div id="confirm-modal" class="modal-overlay" hidden>
+  <div class="modal-window confirm-window">
+    <div class="modal-titlebar">
+      <span class="modal-title"><span class="bracket" aria-hidden="true">[ </span>confirm<span class="bracket" aria-hidden="true"> ]</span></span>
+    </div>
+    <div class="modal-body" role="alertdialog" aria-modal="true" aria-labelledby="confirm-message">
+      <p id="confirm-message"></p>
+      <p class="confirm-actions">
+        <button type="button" class="link-button" id="confirm-yes">[ yes ]</button>
+        <button type="button" class="link-button" id="confirm-no">[ cancel ]</button>
+      </p>
+    </div>
+  </div>
+</div>
+
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
+
+  var confirmModal = $('confirm-modal');
+  var confirmMessage = $('confirm-message');
+  var confirmYes = $('confirm-yes');
+  var confirmNo = $('confirm-no');
+  var confirmResolve = null;
+  var confirmLastFocused = null;
+
+  function customConfirm(message) {
+    confirmMessage.textContent = message;
+    confirmLastFocused = document.activeElement;
+    confirmModal.hidden = false;
+    confirmYes.focus();
+    return new Promise(function (resolve) {
+      confirmResolve = resolve;
+    });
+  }
+
+  function settleConfirm(result) {
+    confirmModal.hidden = true;
+    if (confirmLastFocused && confirmLastFocused.focus) confirmLastFocused.focus();
+    var resolve = confirmResolve;
+    confirmResolve = null;
+    if (resolve) resolve(result);
+  }
+
+  confirmYes.addEventListener('click', function () { settleConfirm(true); });
+  confirmNo.addEventListener('click', function () { settleConfirm(false); });
+  confirmModal.addEventListener('click', function (e) {
+    if (e.target === confirmModal) settleConfirm(false);
+  });
+  document.addEventListener('keydown', function (e) {
+    if (!confirmModal.hidden && e.key === 'Escape') settleConfirm(false);
+  });
 
   function show(id) {
     ['login-box', 'denied-box', 'editor', 'loading-box'].forEach(function (b) {
@@ -144,8 +193,9 @@
         b.addEventListener('click', function () {
           if (spec[0] === '×') {
             var label = describe ? describe() : name;
-            if (!confirm('Remove ' + label + '? It will be gone once you save.')) return;
-            li.remove();
+            customConfirm('Remove ' + label + '? It will be gone once you save.').then(function (ok) {
+              if (ok) li.remove();
+            });
             return;
           }
           var target = spec[0] === '▲' ? li.previousElementSibling : li.nextElementSibling;
@@ -181,10 +231,12 @@
     rm.textContent = '×';
     rm.setAttribute('aria-label', 'remove image');
     rm.addEventListener('click', function () {
-      if (!confirm('Remove this image? It will be gone once you save.')) return;
-      var list = li.parentNode;
-      li.remove();
-      relabelProjectImages(list);
+      customConfirm('Remove this image? It will be gone once you save.').then(function (ok) {
+        if (!ok) return;
+        var list = li.parentNode;
+        li.remove();
+        relabelProjectImages(list);
+      });
     });
     var row = document.createElement('span');
     row.className = 'proj-img-row';
@@ -614,14 +666,16 @@
   });
 
   $('cv-remove').addEventListener('click', function () {
-    if (!confirm('Remove the uploaded CV? This takes effect immediately, not just on save.')) return;
-    var status = $('cv-status');
-    status.textContent = 'removing…';
-    fetch('/api/cv', { method: 'DELETE' }).then(function (res) {
-      if (!res.ok) throw new Error('http ' + res.status);
-      status.textContent = '☼ removed';
-      loadCvInfo();
-    }).catch(function (err) { status.textContent = 'remove failed: ' + err.message; });
+    customConfirm('Remove the uploaded CV? This takes effect immediately, not just on save.').then(function (ok) {
+      if (!ok) return;
+      var status = $('cv-status');
+      status.textContent = 'removing…';
+      fetch('/api/cv', { method: 'DELETE' }).then(function (res) {
+        if (!res.ok) throw new Error('http ' + res.status);
+        status.textContent = '☼ removed';
+        loadCvInfo();
+      }).catch(function (err) { status.textContent = 'remove failed: ' + err.message; });
+    });
   });
 
   function val(row, cls) {
