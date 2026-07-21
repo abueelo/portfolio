@@ -367,14 +367,14 @@
       try {
         return parseExif(buf);
       } catch (e) {
-        return { camera: null, settings: null };
+        return { title: null, camera: null, settings: null };
       }
     });
   }
 
   function parseExif(buf) {
     var view = new DataView(buf);
-    var empty = { camera: null, settings: null };
+    var empty = { title: null, camera: null, settings: null };
     if (view.byteLength < 4 || view.getUint16(0) !== 0xFFD8) return empty;
 
     var offset = 2;
@@ -393,7 +393,7 @@
   }
 
   function readTiff(view, tiffStart) {
-    var empty = { camera: null, settings: null };
+    var empty = { title: null, camera: null, settings: null };
     if (tiffStart + 8 > view.byteLength) return empty;
     var bom = view.getUint16(tiffStart);
     var little = bom === 0x4949;
@@ -441,6 +441,7 @@
     var ifd0 = readIfd(tiffStart + ifd0Offset);
     var make = ifd0[0x010F] || '';
     var model = ifd0[0x0110] || '';
+    var title = ifd0[0x010E] || null;
     var exifTags = ifd0[0x8769] ? readIfd(tiffStart + ifd0[0x8769]) : {};
 
     var camera = null;
@@ -460,7 +461,13 @@
     }
     if (exifTags[0x8827]) parts.push('ISO ' + exifTags[0x8827]);
 
-    return { camera: camera, settings: parts.length ? parts.join(' · ') : null };
+    return { title: title, camera: camera, settings: parts.length ? parts.join(' · ') : null };
+  }
+
+  function titleFromFilename(name) {
+    var base = name.replace(/\.[^.]+$/, '');
+    base = base.replace(/[_-]+/g, ' ').replace(/\s+/g, ' ').trim();
+    return base || null;
   }
 
   function resizePhoto(file) {
@@ -554,6 +561,7 @@
           }).then(function (res) {
             return res.json().then(function (b) {
               if (!res.ok) throw new Error(b.error || 'upload failed');
+              b.title = exif.title || titleFromFilename(file.name);
               b.camera = exif.camera;
               b.settings = exif.settings;
               $('photo-list').appendChild(photoRow(b));
