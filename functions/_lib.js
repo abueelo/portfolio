@@ -52,7 +52,11 @@ export async function requireOwner(request, env) {
 export function json(data, init = {}) {
   return new Response(JSON.stringify(data), {
     ...init,
-    headers: { 'Content-Type': 'application/json', ...(init.headers || {}) },
+    headers: {
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+      ...(init.headers || {}),
+    },
   });
 }
 

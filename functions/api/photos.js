@@ -3,7 +3,7 @@ import { requireOwner, json, newImageId, sniffImage } from '../_lib.js';
 const KEY = 'photos';
 const MAX_BYTES = 15 * 1024 * 1024;
 const MAX_ROWS = 200;
-const MAX_LEN = { title: 120, location: 120, taken: 60 };
+const MAX_LEN = { title: 120, location: 120, taken: 60, camera: 80, settings: 80 };
 
 export async function onRequestGet({ env }) {
   const photos = await env.PORTFOLIO_KV.get(KEY, 'json');
@@ -32,7 +32,16 @@ export async function onRequestPost({ request, env }) {
   const id = newImageId();
   await env.PHOTOS.put('photo-' + id, buf, { httpMetadata: { contentType: type } });
 
-  const entry = { id, title: null, location: null, taken: null, type, size: buf.byteLength };
+  const dim = (v) => {
+    const n = parseInt(request.headers.get(v), 10);
+    return Number.isFinite(n) && n > 0 && n <= 20000 ? n : null;
+  };
+
+  const entry = {
+    id, title: null, location: null, taken: null, camera: null, settings: null,
+    width: dim('X-Image-Width'), height: dim('X-Image-Height'),
+    type, size: buf.byteLength,
+  };
   photos.push(entry);
   await env.PORTFOLIO_KV.put(KEY, JSON.stringify(photos));
   return json(entry);
@@ -58,6 +67,7 @@ export async function onRequestPut({ request, env }) {
   old.forEach(p => { byId[p.id] = p; });
 
   const str = (v, max) => (typeof v === 'string' && v.trim() ? v.trim().slice(0, max) : null);
+  const dim = (v) => (Number.isFinite(v) && v > 0 && v <= 20000 ? v : null);
 
   const next = [];
   const seen = new Set();
@@ -72,6 +82,12 @@ export async function onRequestPut({ request, env }) {
       title: str(p.title, MAX_LEN.title),
       location: str(p.location, MAX_LEN.location),
       taken: str(p.taken, MAX_LEN.taken),
+      camera: str(p.camera, MAX_LEN.camera),
+      settings: str(p.settings, MAX_LEN.settings),
+      // immutable once set — a backfill can only fill in a missing value,
+      // never override real dimensions captured at upload time
+      width: existing.width || dim(p.width) || null,
+      height: existing.height || dim(p.height) || null,
       type: existing.type,
       size: existing.size,
     });

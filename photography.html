@@ -76,6 +76,26 @@
     if (!Array.isArray(photos) || photos.length === 0) return;
     document.getElementById('photo-empty').hidden = true;
     var grid = document.getElementById('photo-grid');
+
+    // real (not CSS-column) masonry: each photo goes into whichever column
+    // currently has the least content, judged by aspect ratio — so a short
+    // landscape shot lands next to a tall portrait instead of leaving a gap
+    // under it. Single column on narrow screens, matching the rest of the
+    // site's breakpoint, so mobile just gets plain upload order.
+    var wide = window.matchMedia('(min-width: 1000px)').matches;
+    var colCount = wide ? 2 : 1;
+    var cols = [];
+    var colHeights = [];
+    for (var i = 0; i < colCount; i++) {
+      var col = document.createElement('div');
+      col.className = 'photo-col';
+      grid.appendChild(col);
+      cols.push(col);
+      colHeights.push(0);
+    }
+
+    var CAPTION_WEIGHT = 0.18; // rough allowance for the caption/camera lines
+
     photos.forEach(function (p) {
       var fig = document.createElement('figure');
       fig.className = 'photo';
@@ -107,7 +127,21 @@
       cap.appendChild(meta);
       fig.appendChild(cap);
 
-      grid.appendChild(fig);
+      if (p.camera || p.settings) {
+        var camLine = document.createElement('p');
+        camLine.className = 'photo-camera';
+        camLine.textContent = [p.camera, p.settings].filter(Boolean).join(' · ');
+        fig.appendChild(camLine);
+      }
+
+      var ratio = (p.width && p.height) ? p.height / p.width : 0.67;
+      var weight = ratio + CAPTION_WEIGHT;
+      var shortest = 0;
+      for (var c = 1; c < colHeights.length; c++) {
+        if (colHeights[c] < colHeights[shortest]) shortest = c;
+      }
+      cols[shortest].appendChild(fig);
+      colHeights[shortest] += weight;
     });
   }).catch(function () {});
 

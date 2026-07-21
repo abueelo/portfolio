@@ -375,9 +375,16 @@ section h2 .bracket {
 }
 
 .photo-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 2.5rem 2.5rem;
+  display: flex;
+  gap: 2.5rem;
+}
+
+.photo-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2.5rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .photo {
@@ -421,6 +428,13 @@ section h2 .bracket {
   color: var(--dim);
   font-size: 0.85rem;
   white-space: nowrap;
+}
+
+.photo-camera {
+  color: var(--dim);
+  font-size: 0.85rem;
+  font-style: italic;
+  margin-top: 0.2rem;
 }
 
 .photo-thumb {
@@ -659,6 +673,25 @@ section h2 .bracket {
 .edit-row .c-text { flex: 1.5; }
 .edit-row .c-url { flex: 2; }
 
+.photo-row {
+  display: block;
+}
+
+.photo-row-main {
+  display: flex;
+  gap: 1ch;
+  align-items: center;
+}
+
+.photo-row-meta {
+  display: flex;
+  gap: 1ch;
+  margin-top: 0.5rem;
+}
+
+.photo-row-meta .p-camera { flex: 1; }
+.photo-row-meta .p-settings { flex: 1.4; }
+
 .row-controls {
   display: flex;
   gap: 0.5ch;
@@ -871,10 +904,6 @@ footer { animation-delay: 0.32s; }
   #projects { grid-area: projects; }
 
   #history { grid-column: 1 / -1; }
-
-  .photo-grid {
-    grid-template-columns: 1fr 1fr;
-  }
 
   #projects {
     display: grid;
