@@ -362,6 +362,107 @@
     return li;
   }
 
+  function readExifCameraInfo(file) {
+    return file.slice(0, 131072).arrayBuffer().then(function (buf) {
+      try {
+        return parseExif(buf);
+      } catch (e) {
+        return { camera: null, settings: null };
+      }
+    });
+  }
+
+  function parseExif(buf) {
+    var view = new DataView(buf);
+    var empty = { camera: null, settings: null };
+    if (view.byteLength < 4 || view.getUint16(0) !== 0xFFD8) return empty;
+
+    var offset = 2;
+    while (offset + 4 <= view.byteLength) {
+      var marker = view.getUint16(offset);
+      if ((marker & 0xFF00) !== 0xFF00) break;
+      if (marker === 0xFFD9 || marker === 0xFFDA) break;
+      var segLen = view.getUint16(offset + 2);
+      if (marker === 0xFFE1 && offset + 4 + 6 <= view.byteLength) {
+        var isExif = view.getUint32(offset + 4) === 0x45786966 && view.getUint16(offset + 8) === 0;
+        if (isExif) return readTiff(view, offset + 4 + 6);
+      }
+      offset += 2 + segLen;
+    }
+    return empty;
+  }
+
+  function readTiff(view, tiffStart) {
+    var empty = { camera: null, settings: null };
+    if (tiffStart + 8 > view.byteLength) return empty;
+    var bom = view.getUint16(tiffStart);
+    var little = bom === 0x4949;
+    if (!little && bom !== 0x4D4D) return empty;
+
+    function u16(o) { return view.getUint16(o, little); }
+    function u32(o) { return view.getUint32(o, little); }
+    function rational(o) {
+      var num = u32(o);
+      var den = u32(o + 4);
+      return den ? num / den : 0;
+    }
+    function ascii(o, count) {
+      var bytes = [];
+      for (var i = 0; i < count - 1; i++) bytes.push(view.getUint8(o + i));
+      return String.fromCharCode.apply(null, bytes).trim();
+    }
+
+    function readIfd(ifdOffset) {
+      var tags = {};
+      if (ifdOffset + 2 > view.byteLength) return tags;
+      var count = u16(ifdOffset);
+      for (var i = 0; i < count; i++) {
+        var entryOffset = ifdOffset + 2 + i * 12;
+        if (entryOffset + 12 > view.byteLength) break;
+        var tag = u16(entryOffset);
+        var type = u16(entryOffset + 2);
+        var num = u32(entryOffset + 4);
+        var valueOffset = entryOffset + 8;
+        if (type === 2) {
+          var strOffset = num > 4 ? tiffStart + u32(valueOffset) : valueOffset;
+          tags[tag] = ascii(strOffset, num);
+        } else if (type === 3) {
+          tags[tag] = u16(valueOffset);
+        } else if (type === 4) {
+          tags[tag] = u32(valueOffset);
+        } else if (type === 5) {
+          tags[tag] = rational(tiffStart + u32(valueOffset));
+        }
+      }
+      return tags;
+    }
+
+    var ifd0Offset = u32(tiffStart + 4);
+    var ifd0 = readIfd(tiffStart + ifd0Offset);
+    var make = ifd0[0x010F] || '';
+    var model = ifd0[0x0110] || '';
+    var exifTags = ifd0[0x8769] ? readIfd(tiffStart + ifd0[0x8769]) : {};
+
+    var camera = null;
+    if (model) {
+      camera = (make && model.toLowerCase().indexOf(make.toLowerCase()) === -1)
+        ? (make + ' ' + model) : model;
+    } else if (make) {
+      camera = make;
+    }
+
+    var parts = [];
+    if (exifTags[0x920A]) parts.push(Math.round(exifTags[0x920A] * 10) / 10 + 'mm');
+    if (exifTags[0x829D]) parts.push('f/' + (Math.round(exifTags[0x829D] * 10) / 10));
+    if (exifTags[0x829A]) {
+      var exposure = exifTags[0x829A];
+      parts.push(exposure < 1 ? '1/' + Math.round(1 / exposure) + 's' : exposure + 's');
+    }
+    if (exifTags[0x8827]) parts.push('ISO ' + exifTags[0x8827]);
+
+    return { camera: camera, settings: parts.length ? parts.join(' · ') : null };
+  }
+
   function resizePhoto(file) {
     return createImageBitmap(file).then(function (bmp) {
       var MAXD = 2400;
@@ -443,17 +544,21 @@
     files.forEach(function (file) {
       chain = chain.then(function () {
         status.textContent = 'uploading ' + (done + 1) + '/' + files.length + '…';
-        return resizePhoto(file).then(function (r) {
+        return Promise.all([readExifCameraInfo(file), resizePhoto(file)]).then(function (results) {
+          var exif = results[0];
+          var r = results[1];
           return fetch('/api/photos', {
             method: 'POST',
             headers: { 'X-Image-Width': r.width, 'X-Image-Height': r.height },
             body: r.blob,
-          });
-        }).then(function (res) {
-          return res.json().then(function (b) {
-            if (!res.ok) throw new Error(b.error || 'upload failed');
-            $('photo-list').appendChild(photoRow(b));
-            done++;
+          }).then(function (res) {
+            return res.json().then(function (b) {
+              if (!res.ok) throw new Error(b.error || 'upload failed');
+              b.camera = exif.camera;
+              b.settings = exif.settings;
+              $('photo-list').appendChild(photoRow(b));
+              done++;
+            });
           });
         });
       });

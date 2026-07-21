@@ -247,7 +247,6 @@ section h2 .bracket {
   text-underline-offset: 0.2em;
 }
 
-/* ── project detail popup ────────────────────────────────── */
 .modal-overlay {
   position: fixed;
   inset: 0;

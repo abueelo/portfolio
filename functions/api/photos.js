@@ -84,8 +84,6 @@ export async function onRequestPut({ request, env }) {
       taken: str(p.taken, MAX_LEN.taken),
       camera: str(p.camera, MAX_LEN.camera),
       settings: str(p.settings, MAX_LEN.settings),
-      // immutable once set — a backfill can only fill in a missing value,
-      // never override real dimensions captured at upload time
       width: existing.width || dim(p.width) || null,
       height: existing.height || dim(p.height) || null,
       type: existing.type,

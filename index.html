@@ -219,8 +219,6 @@
       mainSlot.appendChild(mainImg);
     }
 
-    // remaining images drop in wherever the write-up has an [image] marker,
-    // in order; any left over just append at the end
     var detailsEl = document.getElementById('modal-details');
     detailsEl.textContent = '';
     var chunks = (p.details || '').split(/\[image\]/i);

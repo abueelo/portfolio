@@ -77,11 +77,6 @@
     document.getElementById('photo-empty').hidden = true;
     var grid = document.getElementById('photo-grid');
 
-    // real (not CSS-column) masonry: each photo goes into whichever column
-    // currently has the least content, judged by aspect ratio — so a short
-    // landscape shot lands next to a tall portrait instead of leaving a gap
-    // under it. Single column on narrow screens, matching the rest of the
-    // site's breakpoint, so mobile just gets plain upload order.
     var wide = window.matchMedia('(min-width: 1000px)').matches;
     var colCount = wide ? 2 : 1;
     var cols = [];
@@ -94,7 +89,7 @@
       colHeights.push(0);
     }
 
-    var CAPTION_WEIGHT = 0.18; // rough allowance for the caption/camera lines
+    var CAPTION_WEIGHT = 0.18;
 
     photos.forEach(function (p) {
       var fig = document.createElement('figure');
