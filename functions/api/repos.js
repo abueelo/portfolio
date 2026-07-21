@@ -12,9 +12,12 @@ export async function onRequestGet({ request, env }) {
   const cached = await env.PORTFOLIO_KV.get(CACHE_KEY, 'json');
   if (cached) return json(cached);
 
+  const headers = { Accept: 'application/vnd.github+json', 'User-Agent': 'russl-dev-portfolio' };
+  if (env.GITHUB_API_TOKEN) headers.Authorization = `Bearer ${env.GITHUB_API_TOKEN}`;
+
   const res = await fetch(
     `https://api.github.com/users/${OWNER}/repos?per_page=100&sort=updated`,
-    { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'russl-dev-portfolio' } }
+    { headers }
   );
   if (!res.ok) {
     const stale = await env.PORTFOLIO_KV.get(STALE_KEY, 'json');

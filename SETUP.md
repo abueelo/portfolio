@@ -54,6 +54,13 @@ competing deploy pipeline for the same pushes.
    variables → add `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` (prod app
    values) and `SESSION_SECRET` (fresh `openssl rand -hex 32`) — mark them
    as secret, for the **Production** environment.
+   Optionally also add `GITHUB_API_TOKEN`: GitHub → Settings → Developer
+   settings → Personal access tokens → Fine-grained tokens → **Generate new
+   token**, no repository access/scopes needed (it's only used to raise the
+   rate limit on public API reads). `/api/repos` works fine without it —
+   unauthenticated GitHub API calls are just capped at 60/hr, shared across
+   everyone on Cloudflare's egress IPs, which occasionally 502s the console's
+   repo list until the 5-minute cache refreshes.
 5. **API token for the Action**: Cloudflare dashboard → profile icon →
    **My Profile → API Tokens → Create Token → Edit Cloudflare Workers**
    template (or a custom token scoped to **Account → Cloudflare Pages →
