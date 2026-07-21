@@ -1,6 +1,7 @@
 import { OWNER, requireOwner, json } from '../_lib.js';
 
 const CACHE_KEY = 'repos-cache';
+const STALE_KEY = 'repos-cache-stale';
 const CACHE_TTL = 300;
 
 export async function onRequestGet({ request, env }) {
@@ -15,7 +16,11 @@ export async function onRequestGet({ request, env }) {
     `https://api.github.com/users/${OWNER}/repos?per_page=100&sort=updated`,
     { headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'russl-dev-portfolio' } }
   );
-  if (!res.ok) return json({ error: 'github api failed' }, { status: 502 });
+  if (!res.ok) {
+    const stale = await env.PORTFOLIO_KV.get(STALE_KEY, 'json');
+    if (stale) return json(stale);
+    return json({ error: 'github api failed' }, { status: 502 });
+  }
 
   const repos = (await res.json()).map(r => ({
     name: r.name,
@@ -26,5 +31,6 @@ export async function onRequestGet({ request, env }) {
   }));
 
   await env.PORTFOLIO_KV.put(CACHE_KEY, JSON.stringify(repos), { expirationTtl: CACHE_TTL });
+  await env.PORTFOLIO_KV.put(STALE_KEY, JSON.stringify(repos));
   return json(repos);
 }
