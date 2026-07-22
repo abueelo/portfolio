@@ -248,6 +248,125 @@
     return li;
   }
 
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  var IMAGE_RE = /!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?\)/g;
+  var SOLO_IMAGE_RE = /^!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?\)$/;
+
+  function renderInline(s, images) {
+    s = escapeHtml(s);
+    s = s.replace(IMAGE_RE, function (m, alt, num, side) {
+      var id = images[parseInt(num, 10) - 1];
+      if (!id) return '';
+      var cls = 'modal-inline-img' + (side ? ' float-' + side : '');
+      return '<img class="' + cls + '" loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
+    });
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+    s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return s;
+  }
+
+  function renderMarkdown(text, images) {
+    images = images || [];
+    var html = '';
+    var paragraph = [];
+    var listType = null;
+    var quoteLines = null;
+    var inCode = false;
+    var codeLines = [];
+
+    function flushParagraph() {
+      if (paragraph.length) {
+        html += '<p>' + paragraph.join('<br>') + '</p>';
+        paragraph = [];
+      }
+    }
+    function closeList() {
+      if (listType) { html += '</' + listType + '>'; listType = null; }
+    }
+    function flushQuote() {
+      if (quoteLines) {
+        html += '<blockquote><p>' + quoteLines.join('<br>') + '</p></blockquote>';
+        quoteLines = null;
+      }
+    }
+    function closeBlocks() {
+      flushParagraph();
+      closeList();
+      flushQuote();
+    }
+
+    text.split('\n').forEach(function (line) {
+      var fence = line.match(/^```/);
+      if (inCode) {
+        if (fence) {
+          html += '<pre><code>' + escapeHtml(codeLines.join('\n')) + '</code></pre>';
+          codeLines = [];
+          inCode = false;
+        } else {
+          codeLines.push(line);
+        }
+        return;
+      }
+      if (fence) {
+        closeBlocks();
+        inCode = true;
+        return;
+      }
+
+      var heading = line.match(/^(#{2,4})\s+(.*)/);
+      var hr = line.match(/^(-{3,}|\*{3,})\s*$/);
+      var quote = line.match(/^>\s?(.*)/);
+      var ordered = line.match(/^\d+\.\s+(.*)/);
+      var unordered = line.match(/^[-*]\s+(.*)/);
+      var soloImage = line.trim().match(SOLO_IMAGE_RE);
+
+      if (heading) {
+        closeBlocks();
+        var level = heading[1].length + 1;
+        html += '<h' + level + '><span class="bracket" aria-hidden="true">[ </span>' +
+          renderInline(heading[2], images) + '<span class="bracket" aria-hidden="true"> ]</span></h' + level + '>';
+      } else if (hr) {
+        closeBlocks();
+        html += '<hr>';
+      } else if (soloImage) {
+        closeBlocks();
+        html += renderInline(line.trim(), images);
+      } else if (quote) {
+        flushParagraph();
+        closeList();
+        if (!quoteLines) quoteLines = [];
+        quoteLines.push(renderInline(quote[1], images));
+      } else if (ordered) {
+        flushParagraph();
+        flushQuote();
+        if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; }
+        html += '<li>' + renderInline(ordered[1], images) + '</li>';
+      } else if (unordered) {
+        flushParagraph();
+        flushQuote();
+        if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; }
+        html += '<li>' + renderInline(unordered[1], images) + '</li>';
+      } else if (line.trim() === '') {
+        closeBlocks();
+      } else {
+        closeList();
+        flushQuote();
+        paragraph.push(renderInline(line, images));
+      }
+    });
+    if (inCode) {
+      html += '<pre><code>' + escapeHtml(codeLines.join('\n')) + '</code></pre>';
+    }
+    closeBlocks();
+    return html;
+  }
+
   var DETAILS_TEMPLATE = '## what i built\n\n\n## my role\n\n\n## tech used\n';
 
   function repoRow(repo, selected, saved) {
@@ -308,18 +427,32 @@
       '*italic*, ~~strike~~, `code`, ```code block```, - list, 1. list, > quote, [link](url), ---';
     more.appendChild(moreHint);
 
+    var detailsEditor = document.createElement('div');
+    detailsEditor.className = 'details-editor';
     var detailsTa = document.createElement('textarea');
     detailsTa.className = 'p-details';
     detailsTa.rows = 9;
     detailsTa.placeholder = "a longer write-up — design decisions, challenges, what you'd do differently…";
     detailsTa.value = saved.details || DETAILS_TEMPLATE;
-    more.appendChild(detailsTa);
+    var detailsPreview = document.createElement('div');
+    detailsPreview.className = 'p-details-preview modal-details-text';
+    function refreshPreview() {
+      var ids = [].map.call(imgList.querySelectorAll('.proj-img-item'), function (li) { return li.dataset.id; });
+      var text = detailsTa.value.trim();
+      detailsPreview.innerHTML = text ? renderMarkdown(text, ids) : '<p class="hint">preview appears here…</p>';
+    }
+    detailsTa.addEventListener('input', refreshPreview);
+    detailsEditor.appendChild(detailsTa);
+    detailsEditor.appendChild(detailsPreview);
+    more.appendChild(detailsEditor);
 
     var imgList = document.createElement('ul');
     imgList.className = 'project-img-list';
     (saved.images || []).forEach(function (id) { imgList.appendChild(projectImgItem(id)); });
     relabelProjectImages(imgList);
+    new MutationObserver(refreshPreview).observe(imgList, { childList: true });
     more.appendChild(imgList);
+    refreshPreview();
 
     var imgControls = document.createElement('p');
     imgControls.className = 'cv-controls';

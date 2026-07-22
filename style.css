@@ -627,6 +627,26 @@ section h2 .bracket {
   margin-top: 0.5rem;
 }
 
+.details-editor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5ch;
+  margin-top: 0.5rem;
+}
+
+.details-editor .p-details {
+  flex: 1 1 260px;
+  margin-top: 0;
+}
+
+.p-details-preview {
+  flex: 1 1 260px;
+  border: 1px solid var(--border);
+  padding: 0.75rem 1ch;
+  overflow-y: auto;
+  font-size: 0.9rem;
+}
+
 .project-img-list {
   list-style: none;
   display: flex;
