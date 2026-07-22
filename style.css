@@ -656,7 +656,7 @@ section h2 .bracket {
   outline-offset: 2px;
 }
 
-.editor-block-image {
+.editor-block img.modal-inline-img[data-match] {
   cursor: grab;
 }
 

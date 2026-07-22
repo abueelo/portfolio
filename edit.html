@@ -255,13 +255,16 @@
   var IMAGE_RE = /!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?\)/g;
   var SOLO_IMAGE_RE = /^!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?\)$/;
 
-  function renderInline(s, images) {
+  function renderInline(s, images, matches) {
     s = escapeHtml(s);
     s = s.replace(IMAGE_RE, function (m, alt, num, side) {
+      var matchIndex = matches ? matches.length : -1;
+      if (matches) matches.push(m);
       var id = images[parseInt(num, 10) - 1];
       if (!id) return '';
       var cls = 'modal-inline-img' + (side ? ' float-' + side : '');
-      return '<img class="' + cls + '" loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
+      var attr = matchIndex >= 0 ? ' data-match="' + matchIndex + '"' : '';
+      return '<img class="' + cls + '"' + attr + ' loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
     });
     s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -271,7 +274,7 @@
     return s;
   }
 
-  function renderMarkdown(text, images) {
+  function renderMarkdown(text, images, matches) {
     images = images || [];
     var html = '';
     var paragraph = [];
@@ -330,34 +333,34 @@
         closeBlocks();
         var level = heading[1].length + 1;
         html += '<h' + level + '><span class="bracket" aria-hidden="true">[ </span>' +
-          renderInline(heading[2], images) + '<span class="bracket" aria-hidden="true"> ]</span></h' + level + '>';
+          renderInline(heading[2], images, matches) + '<span class="bracket" aria-hidden="true"> ]</span></h' + level + '>';
       } else if (hr) {
         closeBlocks();
         html += '<hr>';
       } else if (soloImage) {
         closeBlocks();
-        html += renderInline(line.trim(), images);
+        html += renderInline(line.trim(), images, matches);
       } else if (quote) {
         flushParagraph();
         closeList();
         if (!quoteLines) quoteLines = [];
-        quoteLines.push(renderInline(quote[1], images));
+        quoteLines.push(renderInline(quote[1], images, matches));
       } else if (ordered) {
         flushParagraph();
         flushQuote();
         if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; }
-        html += '<li>' + renderInline(ordered[1], images) + '</li>';
+        html += '<li>' + renderInline(ordered[1], images, matches) + '</li>';
       } else if (unordered) {
         flushParagraph();
         flushQuote();
         if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; }
-        html += '<li>' + renderInline(unordered[1], images) + '</li>';
+        html += '<li>' + renderInline(unordered[1], images, matches) + '</li>';
       } else if (line.trim() === '') {
         closeBlocks();
       } else {
         closeList();
         flushQuote();
-        paragraph.push(renderInline(line, images));
+        paragraph.push(renderInline(line, images, matches));
       }
     });
     if (inCode) {
@@ -459,12 +462,11 @@
     moreHint.className = 'hint';
     moreHint.textContent = 'shown in a popup window when someone clicks the project title — ' +
       'the first image below is the main image, always shown at the top; reference any ' +
-      'image on its own line with its number, e.g. ![a caption](2), or add left/right to float ' +
-      'it next to text, e.g. ![a caption](2 left) — it still floats next to whatever paragraph ' +
-      'comes after it, so it never needs to sit inside a sentence. markdown: ## heading, ' +
-      '**bold**, *italic*, ~~strike~~, `code`, ```code block```, - list, 1. list, > quote, ' +
-      '[link](url), --- · in the live preview, drag an image on its own line (or use its ◀▶ ' +
-      'buttons) to move it around';
+      'image with its number, e.g. ![a caption](2), anywhere — its own line or mid-sentence. ' +
+      'markdown: ## heading, **bold**, *italic*, ~~strike~~, `code`, ```code block```, - list, ' +
+      '1. list, > quote, [link](url), --- · in the live preview, drag any image to reposition ' +
+      'it — drop it near the left/right edge to float it next to text, or in the middle for a ' +
+      'plain centered image; images on their own line also get ◀▶ buttons';
     more.appendChild(moreHint);
 
     var detailsEditor = document.createElement('div');
@@ -476,10 +478,16 @@
     detailsTa.value = saved.details || DETAILS_TEMPLATE;
     var detailsPreview = document.createElement('div');
     detailsPreview.className = 'p-details-preview modal-details-text';
-    var dragIndex = null;
+    var dragMatchIndex = null;
 
     function currentImageIds() {
       return [].map.call(imgList.querySelectorAll('.proj-img-item'), function (li) { return li.dataset.id; });
+    }
+
+    function setDetailsText(newText) {
+      var scrollTop = detailsTa.scrollTop;
+      detailsTa.value = newText;
+      detailsTa.scrollTop = scrollTop;
     }
 
     function moveBlock(fromIndex, toIndex) {
@@ -488,7 +496,56 @@
       toIndex = Math.max(0, Math.min(toIndex, blocks.length - 1));
       var moved = blocks.splice(fromIndex, 1)[0];
       blocks.splice(toIndex, 0, moved);
-      detailsTa.value = blocks.join('\n\n');
+      setDetailsText(blocks.join('\n\n'));
+      refreshPreview();
+    }
+
+    function retagMatchSide(matchText, side) {
+      var m = matchText.match(SOLO_IMAGE_RE);
+      if (!m) return matchText;
+      return '![' + m[1] + '](' + m[2] + (side ? ' ' + side : '') + ')';
+    }
+
+    function findImageMatchBlock(blocks, matchIndex) {
+      var count = -1;
+      for (var b = 0; b < blocks.length; b++) {
+        var re = new RegExp(IMAGE_RE.source, 'g');
+        var m;
+        while ((m = re.exec(blocks[b])) !== null) {
+          count++;
+          if (count === matchIndex) return { blockIndex: b, matchText: m[0], start: m.index, end: m.index + m[0].length };
+        }
+      }
+      return null;
+    }
+
+    function moveImageMatch(matchIndex, targetBlockIndex, before, side) {
+      var blocks = splitBlocks(detailsTa.value.trim());
+      var found = findImageMatchBlock(blocks, matchIndex);
+      if (!found) return;
+
+      var taggedRef = retagMatchSide(found.matchText, side);
+      var srcBlockIndex = found.blockIndex;
+      var blockText = blocks[srcBlockIndex];
+      var newBlockText = (blockText.slice(0, found.start) + blockText.slice(found.end))
+        .split('\n').map(function (l) {
+          return l.replace(/[ \t]{2,}/g, ' ').replace(/^[ \t]+|[ \t]+$/g, '');
+        }).join('\n');
+
+      var removedWholeBlock = newBlockText.trim() === '';
+      if (removedWholeBlock) {
+        blocks.splice(srcBlockIndex, 1);
+      } else {
+        blocks[srcBlockIndex] = newBlockText;
+      }
+
+      var adjTargetIndex = targetBlockIndex;
+      if (removedWholeBlock && srcBlockIndex < targetBlockIndex) adjTargetIndex--;
+
+      var insertAt = Math.max(0, Math.min(adjTargetIndex + (before ? 0 : 1), blocks.length));
+      blocks.splice(insertAt, 0, taggedRef);
+
+      setDetailsText(blocks.join('\n\n'));
       refreshPreview();
     }
 
@@ -500,14 +557,14 @@
         detailsPreview.innerHTML = '<p class="hint">preview appears here…</p>';
         return;
       }
+      var matches = [];
       splitBlocks(text).forEach(function (blockText, i) {
         var isImage = SOLO_IMAGE_RE.test(blockText.trim());
         var wrap = document.createElement('div');
         wrap.className = 'editor-block';
         wrap.dataset.index = i;
-        wrap.innerHTML = renderMarkdown(blockText, ids);
+        wrap.innerHTML = renderMarkdown(blockText, ids, matches);
         if (isImage) {
-          wrap.draggable = true;
           wrap.classList.add('editor-block-image');
           var moveControls = document.createElement('span');
           moveControls.className = 'editor-block-move';
@@ -527,42 +584,44 @@
         }
         detailsPreview.appendChild(wrap);
       });
+      [].forEach.call(detailsPreview.querySelectorAll('img.modal-inline-img[data-match]'), function (img) {
+        img.draggable = true;
+      });
     }
 
     detailsPreview.addEventListener('dragstart', function (e) {
-      var block = e.target.closest('.editor-block');
-      if (!block || !block.draggable) { e.preventDefault(); return; }
-      dragIndex = parseInt(block.dataset.index, 10);
+      var img = e.target.closest('img.modal-inline-img[data-match]');
+      if (!img) { e.preventDefault(); return; }
+      dragMatchIndex = parseInt(img.dataset.match, 10);
       e.dataTransfer.effectAllowed = 'move';
       e.dataTransfer.setData('text/plain', '');
     });
     detailsPreview.addEventListener('dragenter', function (e) {
       var block = e.target.closest('.editor-block');
-      if (block && dragIndex !== null) block.classList.add('drag-over');
+      if (block && dragMatchIndex !== null) block.classList.add('drag-over');
     });
     detailsPreview.addEventListener('dragleave', function (e) {
       var block = e.target.closest('.editor-block');
       if (block) block.classList.remove('drag-over');
     });
     detailsPreview.addEventListener('dragover', function (e) {
-      if (dragIndex !== null) e.preventDefault();
+      if (dragMatchIndex !== null) e.preventDefault();
     });
     detailsPreview.addEventListener('drop', function (e) {
       e.preventDefault();
       var target = e.target.closest('.editor-block');
-      if (target && dragIndex !== null) {
+      if (target && dragMatchIndex !== null) {
         var targetIndex = parseInt(target.dataset.index, 10);
-        if (targetIndex !== dragIndex) {
-          var rect = target.getBoundingClientRect();
-          var before = (e.clientY - rect.top) < rect.height / 2;
-          var finalIndex = targetIndex + (before ? 0 : 1);
-          if (dragIndex < targetIndex) finalIndex--;
-          moveBlock(dragIndex, finalIndex);
-        }
+        var rect = target.getBoundingClientRect();
+        var before = (e.clientY - rect.top) < rect.height / 2;
+        var previewRect = detailsPreview.getBoundingClientRect();
+        var xFrac = (e.clientX - previewRect.left) / previewRect.width;
+        var side = xFrac < 0.3 ? 'left' : (xFrac > 0.7 ? 'right' : null);
+        moveImageMatch(dragMatchIndex, targetIndex, before, side);
       }
-      dragIndex = null;
+      dragMatchIndex = null;
     });
-    detailsPreview.addEventListener('dragend', function () { dragIndex = null; });
+    detailsPreview.addEventListener('dragend', function () { dragMatchIndex = null; });
 
     var previewTimer = null;
     detailsTa.addEventListener('input', function () {
