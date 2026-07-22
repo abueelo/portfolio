@@ -638,6 +638,8 @@ section h2 .bracket {
 .details-editor .p-details {
   flex: 1 1 260px;
   margin-top: 0;
+  overflow: hidden;
+  resize: none;
 }
 
 .p-details-preview {

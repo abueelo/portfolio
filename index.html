@@ -205,16 +205,21 @@
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  var IMAGE_RE = /!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?\)/g;
-  var SOLO_IMAGE_RE = /^!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?\)$/;
+  var IMAGE_RE = /!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?(?:\s+(\d+))?\)/g;
+  var SOLO_IMAGE_RE = /^!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?(?:\s+(\d+))?\)$/;
 
   function renderInline(s, images) {
     s = escapeHtml(s);
-    s = s.replace(IMAGE_RE, function (m, alt, num, side) {
+    s = s.replace(IMAGE_RE, function (m, alt, num, side, width) {
       var id = images[parseInt(num, 10) - 1];
       if (!id) return '';
       var cls = 'modal-inline-img' + (side ? ' float-' + side : '');
-      return '<img class="' + cls + '" loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
+      var style = '';
+      if (width) {
+        var w = Math.max(40, Math.min(parseInt(width, 10), 1200));
+        style = ' style="width:' + w + 'px; max-width:100%; height:auto; max-height:none;"';
+      }
+      return '<img class="' + cls + '"' + style + ' loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
     });
     s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');

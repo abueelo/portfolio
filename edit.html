@@ -252,16 +252,21 @@
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  var IMAGE_RE = /!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?\)/g;
-  var SOLO_IMAGE_RE = /^!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?\)$/;
+  var IMAGE_RE = /!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?(?:\s+(\d+))?\)/g;
+  var SOLO_IMAGE_RE = /^!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?(?:\s+(\d+))?\)$/;
 
   function renderInline(s, images) {
     s = escapeHtml(s);
-    s = s.replace(IMAGE_RE, function (m, alt, num, side) {
+    s = s.replace(IMAGE_RE, function (m, alt, num, side, width) {
       var id = images[parseInt(num, 10) - 1];
       if (!id) return '';
       var cls = 'modal-inline-img' + (side ? ' float-' + side : '');
-      return '<img class="' + cls + '" loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
+      var style = '';
+      if (width) {
+        var w = Math.max(40, Math.min(parseInt(width, 10), 1200));
+        style = ' style="width:' + w + 'px; max-width:100%; height:auto; max-height:none;"';
+      }
+      return '<img class="' + cls + '"' + style + ' loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
     });
     s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -423,8 +428,10 @@
     moreHint.textContent = 'shown in a popup window when someone clicks the project title — ' +
       'the first image below is the main image, always shown at the top; reference any ' +
       'image with its number, e.g. ![a caption](2), anywhere in the write-up; add left/right ' +
-      'to float it next to text, e.g. ![a caption](2 left). markdown: ## heading, **bold**, ' +
-      '*italic*, ~~strike~~, `code`, ```code block```, - list, 1. list, > quote, [link](url), ---';
+      'to float it next to text, e.g. ![a caption](2 left); add a width in px after that, e.g. ' +
+      '![a caption](2 left 250) or ![a caption](2 250) with no float. markdown: ## heading, ' +
+      '**bold**, *italic*, ~~strike~~, `code`, ```code block```, - list, 1. list, > quote, ' +
+      '[link](url), ---';
     more.appendChild(moreHint);
 
     var detailsEditor = document.createElement('div');
@@ -444,17 +451,26 @@
     function refreshPreview() {
       var ids = currentImageIds();
       var text = detailsTa.value.trim();
+      var scrollY = window.scrollY;
       detailsPreview.innerHTML = text ? renderMarkdown(text, ids) : '<p class="hint">preview appears here…</p>';
+      window.scrollTo(window.scrollX, scrollY);
+    }
+
+    function autoGrowDetailsTa() {
+      detailsTa.style.height = 'auto';
+      detailsTa.style.height = detailsTa.scrollHeight + 'px';
     }
 
     var previewTimer = null;
     detailsTa.addEventListener('input', function () {
+      autoGrowDetailsTa();
       clearTimeout(previewTimer);
       previewTimer = setTimeout(refreshPreview, 250);
     });
     detailsEditor.appendChild(detailsTa);
     detailsEditor.appendChild(detailsPreview);
     more.appendChild(detailsEditor);
+    more.addEventListener('toggle', autoGrowDetailsTa);
 
     var imgList = document.createElement('ul');
     imgList.className = 'project-img-list';
