@@ -347,12 +347,19 @@ section h2 .bracket {
 .modal-details-text h4 {
   color: var(--fg);
   font-size: 1rem;
-  margin: 1.1rem 0 0.4rem;
+  font-weight: normal;
+  letter-spacing: 0.05em;
+  margin: 1.1rem 0 0.5rem;
 }
 
 .modal-details-text h3:first-child,
 .modal-details-text h4:first-child {
   margin-top: 0;
+}
+
+.modal-details-text h3 .bracket,
+.modal-details-text h4 .bracket {
+  color: var(--dim);
 }
 
 .modal-details-text ul {

@@ -232,7 +232,8 @@
         flushParagraph();
         closeList();
         var level = heading[1].length + 1;
-        html += '<h' + level + '>' + renderInline(heading[2]) + '</h' + level + '>';
+        html += '<h' + level + '><span class="bracket" aria-hidden="true">[ </span>' +
+          renderInline(heading[2]) + '<span class="bracket" aria-hidden="true"> ]</span></h' + level + '>';
       } else if (listItem) {
         flushParagraph();
         if (!inList) { html += '<ul>'; inList = true; }
