@@ -661,11 +661,10 @@ section h2 .bracket {
 }
 
 .editor-block-move {
-  position: absolute;
-  top: 0.9rem;
-  right: 0;
-  display: flex;
+  display: inline-flex;
   gap: 0.5ch;
+  margin: 0.3rem 0 0 0.5ch;
+  vertical-align: top;
 }
 
 .editor-block-move button {
