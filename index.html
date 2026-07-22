@@ -201,6 +201,55 @@
   var projectClose = projectModal.querySelector('.modal-close');
   var projectLastFocused = null;
 
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  }
+
+  function renderInline(s) {
+    s = escapeHtml(s);
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+    return s;
+  }
+
+  function renderMarkdown(text) {
+    var html = '';
+    var paragraph = [];
+    var inList = false;
+    function flushParagraph() {
+      if (paragraph.length) {
+        html += '<p>' + paragraph.join('<br>') + '</p>';
+        paragraph = [];
+      }
+    }
+    function closeList() {
+      if (inList) { html += '</ul>'; inList = false; }
+    }
+    text.split('\n').forEach(function (line) {
+      var heading = line.match(/^(#{2,4})\s+(.*)/);
+      var listItem = line.match(/^[-*]\s+(.*)/);
+      if (heading) {
+        flushParagraph();
+        closeList();
+        var level = heading[1].length + 1;
+        html += '<h' + level + '>' + renderInline(heading[2]) + '</h' + level + '>';
+      } else if (listItem) {
+        flushParagraph();
+        if (!inList) { html += '<ul>'; inList = true; }
+        html += '<li>' + renderInline(listItem[1]) + '</li>';
+      } else if (line.trim() === '') {
+        flushParagraph();
+        closeList();
+      } else {
+        closeList();
+        paragraph.push(renderInline(line));
+      }
+    });
+    flushParagraph();
+    closeList();
+    return html;
+  }
+
   function openProjectModal(p) {
     projectLastFocused = document.activeElement;
     document.getElementById('modal-title-text').textContent = p.name.toLowerCase();
@@ -222,10 +271,10 @@
     var chunks = (p.details || '').split(/\[image\]/i);
     chunks.forEach(function (chunk, i) {
       if (chunk.trim()) {
-        var para = document.createElement('p');
-        para.className = 'modal-details-text';
-        para.textContent = chunk.trim();
-        detailsEl.appendChild(para);
+        var wrap = document.createElement('div');
+        wrap.className = 'modal-details-text';
+        wrap.innerHTML = renderMarkdown(chunk.trim());
+        detailsEl.appendChild(wrap);
       }
       if (i < chunks.length - 1 && allImages.length) {
         var inline = document.createElement('img');

@@ -248,7 +248,7 @@
     return li;
   }
 
-  var DETAILS_TEMPLATE = 'what i built:\n\n\nmy role:\n\n\ntech used:\n';
+  var DETAILS_TEMPLATE = '## what i built\n\n\n## my role\n\n\n## tech used\n';
 
   function repoRow(repo, selected, saved) {
     saved = saved || {};
@@ -303,7 +303,8 @@
     moreHint.className = 'hint';
     moreHint.textContent = 'shown in a popup window when someone clicks the project title — ' +
       'the first image below is the main image, shown at the top; type [image] anywhere ' +
-      'in the write-up to drop in the next one, in order';
+      'in the write-up to drop in the next one, in order. markdown: ## heading, **bold**, ' +
+      '*italic*, - list item';
     more.appendChild(moreHint);
 
     var detailsTa = document.createElement('textarea');

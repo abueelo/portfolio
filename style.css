@@ -329,12 +329,38 @@ section h2 .bracket {
   line-height: 1.6;
 }
 
-.modal-details-text {
-  white-space: pre-wrap;
-}
-
 .modal-details-text + .modal-details-text {
   margin-top: 0.9rem;
+}
+
+.modal-details-text p,
+.modal-details-text ul {
+  margin: 0 0 0.7rem;
+}
+
+.modal-details-text p:last-child,
+.modal-details-text ul:last-child {
+  margin-bottom: 0;
+}
+
+.modal-details-text h3,
+.modal-details-text h4 {
+  color: var(--fg);
+  font-size: 1rem;
+  margin: 1.1rem 0 0.4rem;
+}
+
+.modal-details-text h3:first-child,
+.modal-details-text h4:first-child {
+  margin-top: 0;
+}
+
+.modal-details-text ul {
+  padding-left: 1.4em;
+}
+
+.modal-details-text li {
+  margin-bottom: 0.25rem;
 }
 
 .modal-inline-img {
