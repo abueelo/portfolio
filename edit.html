@@ -449,10 +449,12 @@
     moreHint.className = 'hint';
     moreHint.textContent = 'shown in a popup window when someone clicks the project title — ' +
       'the first image below is the main image, always shown at the top; reference any ' +
-      'image inline in the write-up with its number, e.g. ![a caption](2), or add left/right ' +
-      'to float it next to text, e.g. ![a caption](2 left). markdown: ## heading, **bold**, ' +
-      '*italic*, ~~strike~~, `code`, ```code block```, - list, 1. list, > quote, [link](url), --- · ' +
-      'in the live preview on the right, drag an image (or use its ◀▶ buttons) to move it around';
+      'image on its own line with its number, e.g. ![a caption](2), or add left/right to float ' +
+      'it next to text, e.g. ![a caption](2 left) — it still floats next to whatever paragraph ' +
+      'comes after it, so it never needs to sit inside a sentence. markdown: ## heading, ' +
+      '**bold**, *italic*, ~~strike~~, `code`, ```code block```, - list, 1. list, > quote, ' +
+      '[link](url), --- · in the live preview, drag an image on its own line (or use its ◀▶ ' +
+      'buttons) to move it around';
     more.appendChild(moreHint);
 
     var detailsEditor = document.createElement('div');
