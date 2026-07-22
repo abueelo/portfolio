@@ -303,8 +303,9 @@
     moreHint.className = 'hint';
     moreHint.textContent = 'shown in a popup window when someone clicks the project title — ' +
       'the first image below is the main image, always shown at the top; reference any ' +
-      'image inline in the write-up with its number, e.g. ![a caption](2) for the 2nd image. ' +
-      'markdown: ## heading, **bold**, *italic*, - list item';
+      'image inline in the write-up with its number, e.g. ![a caption](2), or add left/right ' +
+      'to float it next to text, e.g. ![a caption](2 left). markdown: ## heading, **bold**, ' +
+      '*italic*, ~~strike~~, `code`, ```code block```, - list, 1. list, > quote, [link](url), ---';
     more.appendChild(moreHint);
 
     var detailsTa = document.createElement('textarea');

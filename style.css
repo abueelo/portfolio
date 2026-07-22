@@ -326,8 +326,25 @@ section h2 .bracket {
   margin: 0 0 0.7rem;
 }
 
+.modal-details-text::after {
+  content: '';
+  display: table;
+  clear: both;
+}
+
+.modal-details-text p,
+.modal-details-text ul,
+.modal-details-text ol,
+.modal-details-text blockquote,
+.modal-details-text pre {
+  margin: 0 0 0.7rem;
+}
+
 .modal-details-text p:last-child,
-.modal-details-text ul:last-child {
+.modal-details-text ul:last-child,
+.modal-details-text ol:last-child,
+.modal-details-text blockquote:last-child,
+.modal-details-text pre:last-child {
   margin-bottom: 0;
 }
 
@@ -338,6 +355,7 @@ section h2 .bracket {
   font-weight: normal;
   letter-spacing: 0.05em;
   margin: 1.1rem 0 0.5rem;
+  clear: both;
 }
 
 .modal-details-text h3:first-child,
@@ -350,12 +368,51 @@ section h2 .bracket {
   color: var(--dim);
 }
 
-.modal-details-text ul {
+.modal-details-text ul,
+.modal-details-text ol {
   padding-left: 1.4em;
 }
 
 .modal-details-text li {
   margin-bottom: 0.25rem;
+}
+
+.modal-details-text code {
+  font-size: 0.9em;
+  color: var(--amber);
+  background: rgba(128, 128, 128, 0.15);
+  padding: 0.1em 0.4ch;
+  border: 1px solid var(--border);
+}
+
+.modal-details-text pre {
+  border: 1px solid var(--border);
+  padding: 0.75rem 1ch;
+  overflow-x: auto;
+}
+
+.modal-details-text pre code {
+  color: var(--fg);
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.modal-details-text blockquote {
+  border-left: 2px solid var(--dim);
+  padding-left: 1.2ch;
+  color: var(--dim);
+  font-style: italic;
+}
+
+.modal-details-text hr {
+  border: none;
+  border-top: 1px dotted var(--dim);
+  margin: 1.1rem 0;
+}
+
+.modal-details-text del {
+  color: var(--dim);
 }
 
 .modal-inline-img {
@@ -366,6 +423,22 @@ section h2 .bracket {
   height: auto;
   margin: 0.9rem auto;
   border: 1px solid var(--border);
+}
+
+.modal-inline-img.float-left,
+.modal-inline-img.float-right {
+  max-width: 45%;
+  max-height: 220px;
+}
+
+.modal-inline-img.float-left {
+  float: left;
+  margin: 0.2rem 1.2rem 0.6rem 0;
+}
+
+.modal-inline-img.float-right {
+  float: right;
+  margin: 0.2rem 0 0.6rem 1.2rem;
 }
 
 .confirm-window {
