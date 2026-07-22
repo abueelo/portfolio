@@ -21,6 +21,7 @@ export async function onRequestGet({ request, env }) {
       'Content-Type': 'application/pdf',
       'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename="${meta.name}"`,
       'Cache-Control': 'no-cache',
+      'X-Robots-Tag': 'noindex, noarchive, nosnippet',
     },
   });
 }

@@ -723,6 +723,10 @@ section h2 .bracket {
   flex-wrap: wrap;
 }
 
+.cv-controls .add {
+  margin-top: 0;
+}
+
 #editor input[type="file"] {
   font: inherit;
   font-size: 0.85rem;
