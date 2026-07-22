@@ -414,12 +414,20 @@
       var cvLabel = document.createElement('span');
       cvLabel.className = 'label';
       cvLabel.textContent = 'cv';
-      var cvLink = document.createElement('a');
-      cvLink.href = '/api/cv';
-      cvLink.textContent = 'download';
+      var cvView = document.createElement('a');
+      cvView.href = '/api/cv?view=1';
+      cvView.target = '_blank';
+      cvView.rel = 'noopener';
+      cvView.textContent = 'view';
+      var cvDownload = document.createElement('a');
+      cvDownload.href = '/api/cv';
+      cvDownload.download = cv.name || 'cv.pdf';
+      cvDownload.textContent = 'download';
       cvLi.appendChild(cvLabel);
       cvLi.appendChild(document.createTextNode(' '));
-      cvLi.appendChild(cvLink);
+      cvLi.appendChild(cvView);
+      cvLi.appendChild(document.createTextNode(' · '));
+      cvLi.appendChild(cvDownload);
       document.querySelector('.contact-list').appendChild(cvLi);
     }
 

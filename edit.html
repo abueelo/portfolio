@@ -55,7 +55,7 @@
 
     <section>
       <h2><span class="bracket" aria-hidden="true">[ </span>cv<span class="bracket" aria-hidden="true"> ]</span></h2>
-      <p class="hint">upload a pdf and a “cv · download pdf” row appears in the links box.</p>
+      <p class="hint">upload a pdf and a “cv · view · download” row appears in the links box.</p>
       <p id="cv-current">checking…</p>
       <p class="cv-controls">
         <input type="file" id="cv-file" accept="application/pdf">
@@ -248,6 +248,8 @@
     return li;
   }
 
+  var DETAILS_TEMPLATE = 'what i built:\n\n\nmy role:\n\n\ntech used:\n';
+
   function repoRow(repo, selected, saved) {
     saved = saved || {};
     var li = document.createElement('li');
@@ -306,9 +308,9 @@
 
     var detailsTa = document.createElement('textarea');
     detailsTa.className = 'p-details';
-    detailsTa.rows = 5;
+    detailsTa.rows = 9;
     detailsTa.placeholder = "a longer write-up — design decisions, challenges, what you'd do differently…";
-    detailsTa.value = saved.details || '';
+    detailsTa.value = saved.details || DETAILS_TEMPLATE;
     more.appendChild(detailsTa);
 
     var imgList = document.createElement('ul');
@@ -912,7 +914,7 @@
         description: row.querySelector('.p-description').value.trim(),
         linkUrl: val(row, 'link-url'),
         linkText: val(row, 'link-text'),
-        details: row.querySelector('.p-details').value.trim(),
+        details: (function (v) { return v === DETAILS_TEMPLATE.trim() ? '' : v; })(row.querySelector('.p-details').value.trim()),
         images: [].map.call(row.querySelectorAll('.project-img-list li'), function (li) {
           return li.dataset.id;
         }),
