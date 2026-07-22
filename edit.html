@@ -367,6 +367,33 @@
     return html;
   }
 
+  function splitBlocks(text) {
+    var lines = text.split('\n');
+    var blocks = [];
+    var i = 0;
+    while (i < lines.length) {
+      if (lines[i].trim() === '') { i++; continue; }
+      var start = i;
+      if (/^```/.test(lines[i])) {
+        i++;
+        while (i < lines.length && !/^```/.test(lines[i])) i++;
+        if (i < lines.length) i++;
+      } else if (/^\d+\.\s+/.test(lines[i])) {
+        while (i < lines.length && /^\d+\.\s+/.test(lines[i])) i++;
+      } else if (/^[-*]\s+/.test(lines[i])) {
+        while (i < lines.length && /^[-*]\s+/.test(lines[i])) i++;
+      } else if (/^>\s?/.test(lines[i])) {
+        while (i < lines.length && /^>\s?/.test(lines[i])) i++;
+      } else if (/^(#{2,4})\s+/.test(lines[i]) || /^(-{3,}|\*{3,})\s*$/.test(lines[i]) || SOLO_IMAGE_RE.test(lines[i].trim())) {
+        i++;
+      } else {
+        while (i < lines.length && lines[i].trim() !== '') i++;
+      }
+      blocks.push(lines.slice(start, i).join('\n'));
+    }
+    return blocks;
+  }
+
   var DETAILS_TEMPLATE = '## what i built\n\n\n## my role\n\n\n## tech used\n';
 
   function repoRow(repo, selected, saved) {
@@ -424,7 +451,8 @@
       'the first image below is the main image, always shown at the top; reference any ' +
       'image inline in the write-up with its number, e.g. ![a caption](2), or add left/right ' +
       'to float it next to text, e.g. ![a caption](2 left). markdown: ## heading, **bold**, ' +
-      '*italic*, ~~strike~~, `code`, ```code block```, - list, 1. list, > quote, [link](url), ---';
+      '*italic*, ~~strike~~, `code`, ```code block```, - list, 1. list, > quote, [link](url), --- · ' +
+      'in the live preview on the right, drag an image (or use its ◀▶ buttons) to move it around';
     more.appendChild(moreHint);
 
     var detailsEditor = document.createElement('div');
@@ -436,11 +464,94 @@
     detailsTa.value = saved.details || DETAILS_TEMPLATE;
     var detailsPreview = document.createElement('div');
     detailsPreview.className = 'p-details-preview modal-details-text';
-    function refreshPreview() {
-      var ids = [].map.call(imgList.querySelectorAll('.proj-img-item'), function (li) { return li.dataset.id; });
-      var text = detailsTa.value.trim();
-      detailsPreview.innerHTML = text ? renderMarkdown(text, ids) : '<p class="hint">preview appears here…</p>';
+    var dragIndex = null;
+
+    function currentImageIds() {
+      return [].map.call(imgList.querySelectorAll('.proj-img-item'), function (li) { return li.dataset.id; });
     }
+
+    function moveBlock(fromIndex, toIndex) {
+      var blocks = splitBlocks(detailsTa.value.trim());
+      if (fromIndex < 0 || fromIndex >= blocks.length) return;
+      toIndex = Math.max(0, Math.min(toIndex, blocks.length - 1));
+      var moved = blocks.splice(fromIndex, 1)[0];
+      blocks.splice(toIndex, 0, moved);
+      detailsTa.value = blocks.join('\n\n');
+      refreshPreview();
+    }
+
+    function refreshPreview() {
+      var ids = currentImageIds();
+      var text = detailsTa.value.trim();
+      detailsPreview.innerHTML = '';
+      if (!text) {
+        detailsPreview.innerHTML = '<p class="hint">preview appears here…</p>';
+        return;
+      }
+      splitBlocks(text).forEach(function (blockText, i) {
+        var isImage = SOLO_IMAGE_RE.test(blockText.trim());
+        var wrap = document.createElement('div');
+        wrap.className = 'editor-block';
+        wrap.dataset.index = i;
+        wrap.innerHTML = renderMarkdown(blockText, ids);
+        if (isImage) {
+          wrap.draggable = true;
+          wrap.classList.add('editor-block-image');
+          var moveControls = document.createElement('span');
+          moveControls.className = 'editor-block-move';
+          var moveLeft = document.createElement('button');
+          moveLeft.type = 'button';
+          moveLeft.textContent = '◀';
+          moveLeft.setAttribute('aria-label', 'move image earlier');
+          moveLeft.addEventListener('click', function () { moveBlock(i, i - 1); });
+          var moveRight = document.createElement('button');
+          moveRight.type = 'button';
+          moveRight.textContent = '▶';
+          moveRight.setAttribute('aria-label', 'move image later');
+          moveRight.addEventListener('click', function () { moveBlock(i, i + 1); });
+          moveControls.appendChild(moveLeft);
+          moveControls.appendChild(moveRight);
+          wrap.appendChild(moveControls);
+        }
+        detailsPreview.appendChild(wrap);
+      });
+    }
+
+    detailsPreview.addEventListener('dragstart', function (e) {
+      var block = e.target.closest('.editor-block');
+      if (!block || !block.draggable) { e.preventDefault(); return; }
+      dragIndex = parseInt(block.dataset.index, 10);
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', '');
+    });
+    detailsPreview.addEventListener('dragenter', function (e) {
+      var block = e.target.closest('.editor-block');
+      if (block && dragIndex !== null) block.classList.add('drag-over');
+    });
+    detailsPreview.addEventListener('dragleave', function (e) {
+      var block = e.target.closest('.editor-block');
+      if (block) block.classList.remove('drag-over');
+    });
+    detailsPreview.addEventListener('dragover', function (e) {
+      if (dragIndex !== null) e.preventDefault();
+    });
+    detailsPreview.addEventListener('drop', function (e) {
+      e.preventDefault();
+      var target = e.target.closest('.editor-block');
+      if (target && dragIndex !== null) {
+        var targetIndex = parseInt(target.dataset.index, 10);
+        if (targetIndex !== dragIndex) {
+          var rect = target.getBoundingClientRect();
+          var before = (e.clientY - rect.top) < rect.height / 2;
+          var finalIndex = targetIndex + (before ? 0 : 1);
+          if (dragIndex < targetIndex) finalIndex--;
+          moveBlock(dragIndex, finalIndex);
+        }
+      }
+      dragIndex = null;
+    });
+    detailsPreview.addEventListener('dragend', function () { dragIndex = null; });
+
     detailsTa.addEventListener('input', refreshPreview);
     detailsEditor.appendChild(detailsTa);
     detailsEditor.appendChild(detailsPreview);

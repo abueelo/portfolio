@@ -647,6 +647,43 @@ section h2 .bracket {
   font-size: 0.9rem;
 }
 
+.editor-block {
+  position: relative;
+}
+
+.editor-block.drag-over {
+  outline: 1px dashed var(--amber);
+  outline-offset: 2px;
+}
+
+.editor-block-image {
+  cursor: grab;
+}
+
+.editor-block-move {
+  position: absolute;
+  top: 0.9rem;
+  right: 0;
+  display: flex;
+  gap: 0.5ch;
+}
+
+.editor-block-move button {
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--dim);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.05rem 0.5ch;
+  cursor: pointer;
+}
+
+.editor-block-move button:hover,
+.editor-block-move button:focus-visible {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
 .project-img-list {
   list-style: none;
   display: flex;
