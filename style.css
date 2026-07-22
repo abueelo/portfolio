@@ -630,6 +630,7 @@ section h2 .bracket {
 .details-editor {
   display: flex;
   flex-wrap: wrap;
+  align-items: flex-start;
   gap: 1.5ch;
   margin-top: 0.5rem;
 }
@@ -637,16 +638,13 @@ section h2 .bracket {
 .details-editor .p-details {
   flex: 1 1 260px;
   margin-top: 0;
-  height: 14rem;
 }
 
 .p-details-preview {
   flex: 1 1 260px;
   border: 1px solid var(--border);
   padding: 0.75rem 1ch;
-  overflow-y: auto;
   font-size: 0.9rem;
-  height: 14rem;
 }
 
 .editor-block {
