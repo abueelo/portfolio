@@ -387,7 +387,17 @@
       } else if (/^(#{2,4})\s+/.test(lines[i]) || /^(-{3,}|\*{3,})\s*$/.test(lines[i]) || SOLO_IMAGE_RE.test(lines[i].trim())) {
         i++;
       } else {
-        while (i < lines.length && lines[i].trim() !== '') i++;
+        i++;
+        while (i < lines.length && lines[i].trim() !== '' &&
+          !/^```/.test(lines[i]) &&
+          !/^\d+\.\s+/.test(lines[i]) &&
+          !/^[-*]\s+/.test(lines[i]) &&
+          !/^>\s?/.test(lines[i]) &&
+          !/^(#{2,4})\s+/.test(lines[i]) &&
+          !/^(-{3,}|\*{3,})\s*$/.test(lines[i]) &&
+          !SOLO_IMAGE_RE.test(lines[i].trim())) {
+          i++;
+        }
       }
       blocks.push(lines.slice(start, i).join('\n'));
     }
@@ -554,7 +564,11 @@
     });
     detailsPreview.addEventListener('dragend', function () { dragIndex = null; });
 
-    detailsTa.addEventListener('input', refreshPreview);
+    var previewTimer = null;
+    detailsTa.addEventListener('input', function () {
+      clearTimeout(previewTimer);
+      previewTimer = setTimeout(refreshPreview, 250);
+    });
     detailsEditor.appendChild(detailsTa);
     detailsEditor.appendChild(detailsPreview);
     more.appendChild(detailsEditor);
