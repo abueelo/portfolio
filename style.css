@@ -345,7 +345,7 @@ section h2 .bracket {
 
 .modal-details-text h3,
 .modal-details-text h4 {
-  color: var(--fg);
+  color: var(--amber);
   font-size: 1rem;
   font-weight: normal;
   letter-spacing: 0.05em;
