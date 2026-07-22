@@ -185,7 +185,7 @@
   <div class="modal-window">
     <div class="modal-titlebar">
       <span class="modal-title"><span class="bracket" aria-hidden="true">[ </span><span id="modal-title-text"></span><span class="bracket" aria-hidden="true"> ]</span></span>
-      <button type="button" class="modal-close" aria-label="close">×</button>
+      <button type="button" class="modal-close link-button" aria-label="close">[ close ]</button>
     </div>
     <div class="modal-body" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
       <div class="modal-main-image" id="modal-main-image"></div>
@@ -202,17 +202,23 @@
   var projectLastFocused = null;
 
   function escapeHtml(s) {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
-  function renderInline(s) {
+  function renderInline(s, images) {
     s = escapeHtml(s);
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+    s = s.replace(/!\[([^\]]*)\]\((\d+)\)/g, function (m, alt, num) {
+      var id = images[parseInt(num, 10) - 1];
+      if (!id) return '';
+      return '<img class="modal-inline-img" loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
+    });
     return s;
   }
 
-  function renderMarkdown(text) {
+  function renderMarkdown(text, images) {
+    images = images || [];
     var html = '';
     var paragraph = [];
     var inList = false;
@@ -228,22 +234,27 @@
     text.split('\n').forEach(function (line) {
       var heading = line.match(/^(#{2,4})\s+(.*)/);
       var listItem = line.match(/^[-*]\s+(.*)/);
+      var soloImage = line.trim().match(/^!\[([^\]]*)\]\((\d+)\)$/);
       if (heading) {
         flushParagraph();
         closeList();
         var level = heading[1].length + 1;
         html += '<h' + level + '><span class="bracket" aria-hidden="true">[ </span>' +
-          renderInline(heading[2]) + '<span class="bracket" aria-hidden="true"> ]</span></h' + level + '>';
+          renderInline(heading[2], images) + '<span class="bracket" aria-hidden="true"> ]</span></h' + level + '>';
+      } else if (soloImage) {
+        flushParagraph();
+        closeList();
+        html += renderInline(line.trim(), images);
       } else if (listItem) {
         flushParagraph();
         if (!inList) { html += '<ul>'; inList = true; }
-        html += '<li>' + renderInline(listItem[1]) + '</li>';
+        html += '<li>' + renderInline(listItem[1], images) + '</li>';
       } else if (line.trim() === '') {
         flushParagraph();
         closeList();
       } else {
         closeList();
-        paragraph.push(renderInline(line));
+        paragraph.push(renderInline(line, images));
       }
     });
     flushParagraph();
@@ -255,13 +266,12 @@
     projectLastFocused = document.activeElement;
     document.getElementById('modal-title-text').textContent = p.name.toLowerCase();
 
+    var images = Array.isArray(p.images) ? p.images : [];
     var mainSlot = document.getElementById('modal-main-image');
     mainSlot.textContent = '';
-    var allImages = Array.isArray(p.images) ? p.images.slice() : [];
-    var mainImageId = allImages.shift();
-    if (mainImageId) {
+    if (images[0]) {
       var mainImg = document.createElement('img');
-      mainImg.src = '/api/photo/' + mainImageId;
+      mainImg.src = '/api/photo/' + images[0];
       mainImg.alt = '';
       mainImg.loading = 'lazy';
       mainSlot.appendChild(mainImg);
@@ -269,31 +279,12 @@
 
     var detailsEl = document.getElementById('modal-details');
     detailsEl.textContent = '';
-    var chunks = (p.details || '').split(/\[image\]/i);
-    chunks.forEach(function (chunk, i) {
-      if (chunk.trim()) {
-        var wrap = document.createElement('div');
-        wrap.className = 'modal-details-text';
-        wrap.innerHTML = renderMarkdown(chunk.trim());
-        detailsEl.appendChild(wrap);
-      }
-      if (i < chunks.length - 1 && allImages.length) {
-        var inline = document.createElement('img');
-        inline.className = 'modal-inline-img';
-        inline.src = '/api/photo/' + allImages.shift();
-        inline.alt = '';
-        inline.loading = 'lazy';
-        detailsEl.appendChild(inline);
-      }
-    });
-    allImages.forEach(function (id) {
-      var extra = document.createElement('img');
-      extra.className = 'modal-inline-img';
-      extra.src = '/api/photo/' + id;
-      extra.alt = '';
-      extra.loading = 'lazy';
-      detailsEl.appendChild(extra);
-    });
+    if ((p.details || '').trim()) {
+      var wrap = document.createElement('div');
+      wrap.className = 'modal-details-text';
+      wrap.innerHTML = renderMarkdown(p.details.trim(), images);
+      detailsEl.appendChild(wrap);
+    }
     projectWin.style.left = '';
     projectWin.style.top = '';
     projectWin.style.transform = '';

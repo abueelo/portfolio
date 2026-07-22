@@ -294,20 +294,8 @@ section h2 .bracket {
 }
 
 .modal-close {
-  font: inherit;
-  font-size: 1rem;
-  color: var(--dim);
-  background: none;
-  border: none;
-  padding: 0 0.2rem;
-  line-height: 1;
-  cursor: pointer;
   flex: none;
-}
-
-.modal-close:hover,
-.modal-close:focus-visible {
-  color: var(--amber);
+  white-space: nowrap;
 }
 
 .modal-body {
