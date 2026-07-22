@@ -255,16 +255,13 @@
   var IMAGE_RE = /!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?\)/g;
   var SOLO_IMAGE_RE = /^!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?\)$/;
 
-  function renderInline(s, images, matches) {
+  function renderInline(s, images) {
     s = escapeHtml(s);
     s = s.replace(IMAGE_RE, function (m, alt, num, side) {
-      var matchIndex = matches ? matches.length : -1;
-      if (matches) matches.push(m);
       var id = images[parseInt(num, 10) - 1];
       if (!id) return '';
       var cls = 'modal-inline-img' + (side ? ' float-' + side : '');
-      var attr = matchIndex >= 0 ? ' data-match="' + matchIndex + '"' : '';
-      return '<img class="' + cls + '"' + attr + ' loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
+      return '<img class="' + cls + '" loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
     });
     s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
     s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
@@ -274,7 +271,7 @@
     return s;
   }
 
-  function renderMarkdown(text, images, matches) {
+  function renderMarkdown(text, images) {
     images = images || [];
     var html = '';
     var paragraph = [];
@@ -333,34 +330,34 @@
         closeBlocks();
         var level = heading[1].length + 1;
         html += '<h' + level + '><span class="bracket" aria-hidden="true">[ </span>' +
-          renderInline(heading[2], images, matches) + '<span class="bracket" aria-hidden="true"> ]</span></h' + level + '>';
+          renderInline(heading[2], images) + '<span class="bracket" aria-hidden="true"> ]</span></h' + level + '>';
       } else if (hr) {
         closeBlocks();
         html += '<hr>';
       } else if (soloImage) {
         closeBlocks();
-        html += renderInline(line.trim(), images, matches);
+        html += renderInline(line.trim(), images);
       } else if (quote) {
         flushParagraph();
         closeList();
         if (!quoteLines) quoteLines = [];
-        quoteLines.push(renderInline(quote[1], images, matches));
+        quoteLines.push(renderInline(quote[1], images));
       } else if (ordered) {
         flushParagraph();
         flushQuote();
         if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; }
-        html += '<li>' + renderInline(ordered[1], images, matches) + '</li>';
+        html += '<li>' + renderInline(ordered[1], images) + '</li>';
       } else if (unordered) {
         flushParagraph();
         flushQuote();
         if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; }
-        html += '<li>' + renderInline(unordered[1], images, matches) + '</li>';
+        html += '<li>' + renderInline(unordered[1], images) + '</li>';
       } else if (line.trim() === '') {
         closeBlocks();
       } else {
         closeList();
         flushQuote();
-        paragraph.push(renderInline(line, images, matches));
+        paragraph.push(renderInline(line, images));
       }
     });
     if (inCode) {
@@ -368,43 +365,6 @@
     }
     closeBlocks();
     return html;
-  }
-
-  function splitBlocks(text) {
-    var lines = text.split('\n');
-    var blocks = [];
-    var i = 0;
-    while (i < lines.length) {
-      if (lines[i].trim() === '') { i++; continue; }
-      var start = i;
-      if (/^```/.test(lines[i])) {
-        i++;
-        while (i < lines.length && !/^```/.test(lines[i])) i++;
-        if (i < lines.length) i++;
-      } else if (/^\d+\.\s+/.test(lines[i])) {
-        while (i < lines.length && /^\d+\.\s+/.test(lines[i])) i++;
-      } else if (/^[-*]\s+/.test(lines[i])) {
-        while (i < lines.length && /^[-*]\s+/.test(lines[i])) i++;
-      } else if (/^>\s?/.test(lines[i])) {
-        while (i < lines.length && /^>\s?/.test(lines[i])) i++;
-      } else if (/^(#{2,4})\s+/.test(lines[i]) || /^(-{3,}|\*{3,})\s*$/.test(lines[i]) || SOLO_IMAGE_RE.test(lines[i].trim())) {
-        i++;
-      } else {
-        i++;
-        while (i < lines.length && lines[i].trim() !== '' &&
-          !/^```/.test(lines[i]) &&
-          !/^\d+\.\s+/.test(lines[i]) &&
-          !/^[-*]\s+/.test(lines[i]) &&
-          !/^>\s?/.test(lines[i]) &&
-          !/^(#{2,4})\s+/.test(lines[i]) &&
-          !/^(-{3,}|\*{3,})\s*$/.test(lines[i]) &&
-          !SOLO_IMAGE_RE.test(lines[i].trim())) {
-          i++;
-        }
-      }
-      blocks.push(lines.slice(start, i).join('\n'));
-    }
-    return blocks;
   }
 
   var DETAILS_TEMPLATE = '## what i built\n\n\n## my role\n\n\n## tech used\n';
@@ -462,11 +422,9 @@
     moreHint.className = 'hint';
     moreHint.textContent = 'shown in a popup window when someone clicks the project title — ' +
       'the first image below is the main image, always shown at the top; reference any ' +
-      'image with its number, e.g. ![a caption](2), anywhere — its own line or mid-sentence. ' +
-      'markdown: ## heading, **bold**, *italic*, ~~strike~~, `code`, ```code block```, - list, ' +
-      '1. list, > quote, [link](url), --- · in the live preview, drag any image to reposition ' +
-      'it — drop it near the left/right edge to float it next to text, or in the middle for a ' +
-      'plain centered image; images on their own line also get ◀▶ buttons';
+      'image with its number, e.g. ![a caption](2), anywhere in the write-up; add left/right ' +
+      'to float it next to text, e.g. ![a caption](2 left). markdown: ## heading, **bold**, ' +
+      '*italic*, ~~strike~~, `code`, ```code block```, - list, 1. list, > quote, [link](url), ---';
     more.appendChild(moreHint);
 
     var detailsEditor = document.createElement('div');
@@ -478,150 +436,16 @@
     detailsTa.value = saved.details || DETAILS_TEMPLATE;
     var detailsPreview = document.createElement('div');
     detailsPreview.className = 'p-details-preview modal-details-text';
-    var dragMatchIndex = null;
 
     function currentImageIds() {
       return [].map.call(imgList.querySelectorAll('.proj-img-item'), function (li) { return li.dataset.id; });
     }
 
-    function setDetailsText(newText) {
-      var scrollTop = detailsTa.scrollTop;
-      detailsTa.value = newText;
-      detailsTa.scrollTop = scrollTop;
-    }
-
-    function moveBlock(fromIndex, toIndex) {
-      var blocks = splitBlocks(detailsTa.value.trim());
-      if (fromIndex < 0 || fromIndex >= blocks.length) return;
-      toIndex = Math.max(0, Math.min(toIndex, blocks.length - 1));
-      var moved = blocks.splice(fromIndex, 1)[0];
-      blocks.splice(toIndex, 0, moved);
-      setDetailsText(blocks.join('\n\n'));
-      refreshPreview();
-    }
-
-    function retagMatchSide(matchText, side) {
-      var m = matchText.match(SOLO_IMAGE_RE);
-      if (!m) return matchText;
-      return '![' + m[1] + '](' + m[2] + (side ? ' ' + side : '') + ')';
-    }
-
-    function findImageMatchBlock(blocks, matchIndex) {
-      var count = -1;
-      for (var b = 0; b < blocks.length; b++) {
-        var re = new RegExp(IMAGE_RE.source, 'g');
-        var m;
-        while ((m = re.exec(blocks[b])) !== null) {
-          count++;
-          if (count === matchIndex) return { blockIndex: b, matchText: m[0], start: m.index, end: m.index + m[0].length };
-        }
-      }
-      return null;
-    }
-
-    function moveImageMatch(matchIndex, targetBlockIndex, before, side) {
-      var blocks = splitBlocks(detailsTa.value.trim());
-      var found = findImageMatchBlock(blocks, matchIndex);
-      if (!found) return;
-
-      var taggedRef = retagMatchSide(found.matchText, side);
-      var srcBlockIndex = found.blockIndex;
-      var blockText = blocks[srcBlockIndex];
-      var newBlockText = (blockText.slice(0, found.start) + blockText.slice(found.end))
-        .split('\n').map(function (l) {
-          return l.replace(/[ \t]{2,}/g, ' ').replace(/^[ \t]+|[ \t]+$/g, '');
-        }).join('\n');
-
-      var removedWholeBlock = newBlockText.trim() === '';
-      if (removedWholeBlock) {
-        blocks.splice(srcBlockIndex, 1);
-      } else {
-        blocks[srcBlockIndex] = newBlockText;
-      }
-
-      var adjTargetIndex = targetBlockIndex;
-      if (removedWholeBlock && srcBlockIndex < targetBlockIndex) adjTargetIndex--;
-
-      var insertAt = Math.max(0, Math.min(adjTargetIndex + (before ? 0 : 1), blocks.length));
-      blocks.splice(insertAt, 0, taggedRef);
-
-      setDetailsText(blocks.join('\n\n'));
-      refreshPreview();
-    }
-
     function refreshPreview() {
       var ids = currentImageIds();
       var text = detailsTa.value.trim();
-      detailsPreview.innerHTML = '';
-      if (!text) {
-        detailsPreview.innerHTML = '<p class="hint">preview appears here…</p>';
-        return;
-      }
-      var matches = [];
-      splitBlocks(text).forEach(function (blockText, i) {
-        var isImage = SOLO_IMAGE_RE.test(blockText.trim());
-        var wrap = document.createElement('div');
-        wrap.className = 'editor-block';
-        wrap.dataset.index = i;
-        wrap.innerHTML = renderMarkdown(blockText, ids, matches);
-        if (isImage) {
-          wrap.classList.add('editor-block-image');
-          var moveControls = document.createElement('span');
-          moveControls.className = 'editor-block-move';
-          var moveLeft = document.createElement('button');
-          moveLeft.type = 'button';
-          moveLeft.textContent = '◀';
-          moveLeft.setAttribute('aria-label', 'move image earlier');
-          moveLeft.addEventListener('click', function () { moveBlock(i, i - 1); });
-          var moveRight = document.createElement('button');
-          moveRight.type = 'button';
-          moveRight.textContent = '▶';
-          moveRight.setAttribute('aria-label', 'move image later');
-          moveRight.addEventListener('click', function () { moveBlock(i, i + 1); });
-          moveControls.appendChild(moveLeft);
-          moveControls.appendChild(moveRight);
-          wrap.appendChild(moveControls);
-        }
-        detailsPreview.appendChild(wrap);
-      });
-      [].forEach.call(detailsPreview.querySelectorAll('img.modal-inline-img[data-match]'), function (img) {
-        img.draggable = true;
-      });
+      detailsPreview.innerHTML = text ? renderMarkdown(text, ids) : '<p class="hint">preview appears here…</p>';
     }
-
-    detailsPreview.addEventListener('dragstart', function (e) {
-      var img = e.target.closest('img.modal-inline-img[data-match]');
-      if (!img) { e.preventDefault(); return; }
-      dragMatchIndex = parseInt(img.dataset.match, 10);
-      e.dataTransfer.effectAllowed = 'move';
-      e.dataTransfer.setData('text/plain', '');
-    });
-    detailsPreview.addEventListener('dragenter', function (e) {
-      var block = e.target.closest('.editor-block');
-      if (block && dragMatchIndex !== null) block.classList.add('drag-over');
-    });
-    detailsPreview.addEventListener('dragleave', function (e) {
-      var block = e.target.closest('.editor-block');
-      if (block) block.classList.remove('drag-over');
-    });
-    detailsPreview.addEventListener('dragover', function (e) {
-      if (dragMatchIndex !== null) e.preventDefault();
-    });
-    detailsPreview.addEventListener('drop', function (e) {
-      e.preventDefault();
-      var target = e.target.closest('.editor-block');
-      if (target && dragMatchIndex !== null) {
-        var targetIndex = parseInt(target.dataset.index, 10);
-        var rect = target.getBoundingClientRect();
-        var before = (e.clientY - rect.top) < rect.height / 2;
-        var previewRect = detailsPreview.getBoundingClientRect();
-        var xFrac = (e.clientX - previewRect.left) / previewRect.width;
-        var side = xFrac < 0.3 ? 'left' : (xFrac > 0.7 ? 'right' : null);
-        moveImageMatch(dragMatchIndex, targetIndex, before, side);
-      }
-      dragMatchIndex = null;
-    });
-    detailsPreview.addEventListener('dragend', function () { dragMatchIndex = null; });
 
     var previewTimer = null;
     detailsTa.addEventListener('input', function () {

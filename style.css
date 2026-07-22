@@ -647,42 +647,6 @@ section h2 .bracket {
   font-size: 0.9rem;
 }
 
-.editor-block {
-  position: relative;
-}
-
-.editor-block.drag-over {
-  outline: 1px dashed var(--amber);
-  outline-offset: 2px;
-}
-
-.editor-block img.modal-inline-img[data-match] {
-  cursor: grab;
-}
-
-.editor-block-move {
-  display: inline-flex;
-  gap: 0.5ch;
-  margin: 0.3rem 0 0 0.5ch;
-  vertical-align: top;
-}
-
-.editor-block-move button {
-  font: inherit;
-  font-size: 0.8rem;
-  color: var(--dim);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  padding: 0.05rem 0.5ch;
-  cursor: pointer;
-}
-
-.editor-block-move button:hover,
-.editor-block-move button:focus-visible {
-  color: var(--amber);
-  border-color: var(--amber);
-}
-
 .project-img-list {
   list-style: none;
   display: flex;
