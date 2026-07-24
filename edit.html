@@ -525,11 +525,9 @@
       detailsTa.style.height = detailsTa.scrollHeight + 'px';
     }
 
-    var previewTimer = null;
     detailsTa.addEventListener('input', function () {
       autoGrowDetailsTa();
-      clearTimeout(previewTimer);
-      previewTimer = setTimeout(refreshPreview, 250);
+      refreshPreview();
     });
     detailsEditor.appendChild(detailsTa);
     detailsEditor.appendChild(detailsPreview);
