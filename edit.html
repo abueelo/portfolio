@@ -372,6 +372,43 @@
     return html;
   }
 
+  function splitBlocks(text) {
+    var lines = text.split('\n');
+    var blocks = [];
+    var i = 0;
+    while (i < lines.length) {
+      if (lines[i].trim() === '') { i++; continue; }
+      var start = i;
+      if (/^```/.test(lines[i])) {
+        i++;
+        while (i < lines.length && !/^```/.test(lines[i])) i++;
+        if (i < lines.length) i++;
+      } else if (/^\d+\.\s+/.test(lines[i])) {
+        while (i < lines.length && /^\d+\.\s+/.test(lines[i])) i++;
+      } else if (/^[-*]\s+/.test(lines[i])) {
+        while (i < lines.length && /^[-*]\s+/.test(lines[i])) i++;
+      } else if (/^>\s?/.test(lines[i])) {
+        while (i < lines.length && /^>\s?/.test(lines[i])) i++;
+      } else if (/^(#{2,4})\s+/.test(lines[i]) || /^(-{3,}|\*{3,})\s*$/.test(lines[i]) || SOLO_IMAGE_RE.test(lines[i].trim())) {
+        i++;
+      } else {
+        i++;
+        while (i < lines.length && lines[i].trim() !== '' &&
+          !/^```/.test(lines[i]) &&
+          !/^\d+\.\s+/.test(lines[i]) &&
+          !/^[-*]\s+/.test(lines[i]) &&
+          !/^>\s?/.test(lines[i]) &&
+          !/^(#{2,4})\s+/.test(lines[i]) &&
+          !/^(-{3,}|\*{3,})\s*$/.test(lines[i]) &&
+          !SOLO_IMAGE_RE.test(lines[i].trim())) {
+          i++;
+        }
+      }
+      blocks.push(lines.slice(start, i).join('\n'));
+    }
+    return blocks;
+  }
+
   var DETAILS_TEMPLATE = '## what i built\n\n\n## my role\n\n\n## tech used\n';
 
   function repoRow(repo, selected, saved) {
@@ -448,11 +485,38 @@
       return [].map.call(imgList.querySelectorAll('.proj-img-item'), function (li) { return li.dataset.id; });
     }
 
+    var lastBlockHtml = [];
+
     function refreshPreview() {
       var ids = currentImageIds();
       var text = detailsTa.value.trim();
       var scrollY = window.scrollY;
-      detailsPreview.innerHTML = text ? renderMarkdown(text, ids) : '<p class="hint">preview appears here…</p>';
+
+      if (!text) {
+        if (lastBlockHtml.length) {
+          detailsPreview.innerHTML = '<p class="hint">preview appears here…</p>';
+          lastBlockHtml = [];
+        }
+        window.scrollTo(window.scrollX, scrollY);
+        return;
+      }
+
+      var newBlockHtml = splitBlocks(text).map(function (b) { return renderMarkdown(b, ids); });
+      for (var i = 0; i < newBlockHtml.length; i++) {
+        if (newBlockHtml[i] === lastBlockHtml[i]) continue;
+        var node = detailsPreview.children[i];
+        if (!node) {
+          node = document.createElement('div');
+          node.className = 'preview-block';
+          detailsPreview.appendChild(node);
+        }
+        node.innerHTML = newBlockHtml[i];
+      }
+      while (detailsPreview.children.length > newBlockHtml.length) {
+        detailsPreview.removeChild(detailsPreview.lastChild);
+      }
+
+      lastBlockHtml = newBlockHtml;
       window.scrollTo(window.scrollX, scrollY);
     }
 

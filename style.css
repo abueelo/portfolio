@@ -363,6 +363,19 @@ section h2 .bracket {
   margin-top: 0;
 }
 
+.modal-details-text .preview-block:not(:first-child) > h3,
+.modal-details-text .preview-block:not(:first-child) > h4 {
+  margin-top: 1.1rem;
+}
+
+.modal-details-text .preview-block:not(:last-child) > p,
+.modal-details-text .preview-block:not(:last-child) > ul,
+.modal-details-text .preview-block:not(:last-child) > ol,
+.modal-details-text .preview-block:not(:last-child) > blockquote,
+.modal-details-text .preview-block:not(:last-child) > pre {
+  margin-bottom: 0.7rem;
+}
+
 .modal-details-text h3 .bracket,
 .modal-details-text h4 .bracket {
   color: var(--dim);
