@@ -94,6 +94,11 @@
       </p>
     </section>
 
+    <p class="hint" id="draft-banner" hidden>
+      you have unsaved local changes from <span id="draft-time"></span> —
+      <button type="button" class="link-button" id="draft-restore">[ restore ]</button>
+      <button type="button" class="link-button" id="draft-discard">[ discard ]</button>
+    </p>
     <p class="save-row">
       <button id="save" type="button">[ save ]</button>
       <span id="status" role="status"></span>
@@ -1120,6 +1125,159 @@
     return el ? el.value.trim() : '';
   }
 
+  function collectState() {
+    var projects = [];
+    document.querySelectorAll('.repo-row').forEach(function (row) {
+      var repo = JSON.parse(row.dataset.repo);
+      projects.push({
+        name: repo.name,
+        checked: row.querySelector('input[type="checkbox"]').checked,
+        description: row.querySelector('.p-description').value.trim(),
+        linkUrl: val(row, 'link-url'),
+        linkText: val(row, 'link-text'),
+        details: (function (v) { return v === DETAILS_TEMPLATE.trim() ? '' : v; })(row.querySelector('.p-details').value.trim()),
+        images: [].map.call(row.querySelectorAll('.project-img-list li'), function (li) {
+          return li.dataset.id;
+        }),
+      });
+    });
+
+    var site = {
+      about: $('about-input').value.trim(),
+      photoAbout: $('photo-about-input').value.trim(),
+      tagline: $('tagline-input').value.trim(),
+      history: [].map.call(document.querySelectorAll('#hist-list .edit-row'), function (row) {
+        return { start: val(row, 'h-start'), end: val(row, 'h-end'), what: val(row, 'h-what') };
+      }).filter(function (h) { return h.start || h.end || h.what; }),
+      contacts: [].map.call(document.querySelectorAll('#contact-list-edit .edit-row'), function (row) {
+        return { label: val(row, 'c-label'), text: val(row, 'c-text'), url: val(row, 'c-url') };
+      }).filter(function (c) { return c.label || c.text; }),
+    };
+
+    var photos = [].map.call(document.querySelectorAll('#photo-list .photo-row'), function (row) {
+      return {
+        id: row.dataset.id,
+        title: val(row, 'p-title'),
+        location: val(row, 'p-location'),
+        taken: val(row, 'p-taken'),
+        camera: val(row, 'p-camera'),
+        settings: val(row, 'p-settings'),
+      };
+    });
+
+    return { projects: projects, site: site, photos: photos };
+  }
+
+  function applyState(state) {
+    if (state.site) {
+      $('about-input').value = state.site.about || '';
+      $('photo-about-input').value = state.site.photoAbout || '';
+      $('tagline-input').value = state.site.tagline || '';
+
+      var histList = $('hist-list');
+      histList.textContent = '';
+      (state.site.history && state.site.history.length ? state.site.history : [null]).forEach(function (h) {
+        histList.appendChild(histRow(h));
+      });
+
+      var contactList = $('contact-list-edit');
+      contactList.textContent = '';
+      (state.site.contacts && state.site.contacts.length ? state.site.contacts : DEFAULT_CONTACTS).forEach(function (c) {
+        contactList.appendChild(contactRow(c));
+      });
+    }
+
+    if (state.projects) {
+      var byName = {};
+      state.projects.forEach(function (p) { byName[p.name] = p; });
+      document.querySelectorAll('.repo-row').forEach(function (row) {
+        var repo = JSON.parse(row.dataset.repo);
+        var p = byName[repo.name];
+        if (!p) return;
+        row.querySelector('input[type="checkbox"]').checked = p.checked;
+        row.querySelector('.p-description').value = p.description || '';
+        row.querySelector('.link-url').value = p.linkUrl || '';
+        row.querySelector('.link-text').value = p.linkText || '';
+        var detailsTa = row.querySelector('.p-details');
+        detailsTa.value = p.details || DETAILS_TEMPLATE;
+        detailsTa.dispatchEvent(new Event('input', { bubbles: true }));
+        var imgList = row.querySelector('.project-img-list');
+        imgList.textContent = '';
+        (p.images || []).forEach(function (id) { imgList.appendChild(projectImgItem(id)); });
+        relabelProjectImages(imgList);
+      });
+    }
+
+    if (state.photos) {
+      var byId = {};
+      state.photos.forEach(function (p) { byId[p.id] = p; });
+      document.querySelectorAll('#photo-list .photo-row').forEach(function (row) {
+        var p = byId[row.dataset.id];
+        if (!p) return;
+        row.querySelector('.p-title').value = p.title || '';
+        row.querySelector('.p-location').value = p.location || '';
+        row.querySelector('.p-taken').value = p.taken || '';
+        row.querySelector('.p-camera').value = p.camera || '';
+        row.querySelector('.p-settings').value = p.settings || '';
+      });
+    }
+  }
+
+  var DRAFT_KEY = 'edit-draft-v1';
+
+  function saveDraft() {
+    localStorage.setItem(DRAFT_KEY, JSON.stringify({ savedAt: Date.now(), state: collectState() }));
+  }
+
+  function clearDraft() {
+    localStorage.removeItem(DRAFT_KEY);
+  }
+
+  function timeAgo(ms) {
+    var mins = Math.round((Date.now() - ms) / 60000);
+    if (mins < 1) return 'just now';
+    if (mins === 1) return '1 minute ago';
+    if (mins < 60) return mins + ' minutes ago';
+    var hours = Math.round(mins / 60);
+    return hours === 1 ? '1 hour ago' : hours + ' hours ago';
+  }
+
+  function checkForDraft() {
+    var raw = localStorage.getItem(DRAFT_KEY);
+    if (!raw) return;
+    var draft;
+    try {
+      draft = JSON.parse(raw);
+    } catch {
+      clearDraft();
+      return;
+    }
+    if (JSON.stringify(draft.state) === JSON.stringify(collectState())) {
+      clearDraft();
+      return;
+    }
+    $('draft-time').textContent = timeAgo(draft.savedAt);
+    $('draft-banner').hidden = false;
+
+    $('draft-restore').addEventListener('click', function restore() {
+      applyState(draft.state);
+      $('draft-banner').hidden = true;
+      $('status').textContent = 'restored unsaved changes — press save to publish them';
+      $('draft-restore').removeEventListener('click', restore);
+    });
+    $('draft-discard').addEventListener('click', function discard() {
+      clearDraft();
+      $('draft-banner').hidden = true;
+      $('draft-discard').removeEventListener('click', discard);
+    });
+  }
+
+  var draftTimer = null;
+  document.getElementById('editor').addEventListener('input', function () {
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(saveDraft, 400);
+  });
+
   $('save').addEventListener('click', function () {
     var status = $('status');
     status.textContent = 'saving…';
@@ -1183,6 +1341,7 @@
 
     Promise.all([put('/api/projects', projects), put('/api/site', site), put('/api/photos', photos)])
       .then(function () {
+        clearDraft();
         status.textContent = '☼ saved — ' + projects.length + ' project' + (projects.length === 1 ? '' : 's') + ' on display';
       })
       .catch(function (err) {
@@ -1217,6 +1376,7 @@
       buildPhotos(results[3] || []);
       loadCvInfo();
       show('editor');
+      checkForDraft();
     });
   }).catch(function () {
     $('login-error').textContent = 'could not reach the server — try again.';
