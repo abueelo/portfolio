@@ -15,11 +15,13 @@ export async function onRequestGet({ request, env }) {
   const buf = await env.PORTFOLIO_KV.get(DATA_KEY, 'arrayBuffer');
   if (!buf) return json({ error: 'no cv uploaded' }, { status: 404 });
 
+  const inline = new URL(request.url).searchParams.has('view');
   return new Response(buf, {
     headers: {
       'Content-Type': 'application/pdf',
-      'Content-Disposition': `attachment; filename="${meta.name}"`,
+      'Content-Disposition': `${inline ? 'inline' : 'attachment'}; filename="${meta.name}"`,
       'Cache-Control': 'no-cache',
+      'X-Robots-Tag': 'noindex, noarchive, nosnippet',
     },
   });
 }

@@ -185,7 +185,7 @@
   <div class="modal-window">
     <div class="modal-titlebar">
       <span class="modal-title"><span class="bracket" aria-hidden="true">[ </span><span id="modal-title-text"></span><span class="bracket" aria-hidden="true"> ]</span></span>
-      <button type="button" class="modal-close" aria-label="close">×</button>
+      <button type="button" class="modal-close link-button" aria-label="close">[ close ]</button>
     </div>
     <div class="modal-body" role="dialog" aria-modal="true" aria-labelledby="modal-title-text">
       <div class="modal-main-image" id="modal-main-image"></div>
@@ -201,17 +201,140 @@
   var projectClose = projectModal.querySelector('.modal-close');
   var projectLastFocused = null;
 
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  var IMAGE_RE = /!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?(?:\s+(\d+))?\)/g;
+  var SOLO_IMAGE_RE = /^!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?(?:\s+(\d+))?\)$/;
+
+  function renderInline(s, images) {
+    s = escapeHtml(s);
+    s = s.replace(IMAGE_RE, function (m, alt, num, side, width) {
+      var id = images[parseInt(num, 10) - 1];
+      if (!id) return '';
+      var cls = 'modal-inline-img' + (side ? ' float-' + side : '');
+      var style = '';
+      if (width) {
+        var w = Math.max(40, Math.min(parseInt(width, 10), 1200));
+        style = ' style="width:' + w + 'px; max-width:100%; height:auto; max-height:none;"';
+      }
+      return '<img class="' + cls + '"' + style + ' loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
+    });
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+    s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return s;
+  }
+
+  function renderMarkdown(text, images) {
+    images = images || [];
+    var html = '';
+    var paragraph = [];
+    var listType = null;
+    var quoteLines = null;
+    var inCode = false;
+    var codeLines = [];
+
+    function flushParagraph() {
+      if (paragraph.length) {
+        html += '<p>' + paragraph.join('<br>') + '</p>';
+        paragraph = [];
+      }
+    }
+    function closeList() {
+      if (listType) { html += '</' + listType + '>'; listType = null; }
+    }
+    function flushQuote() {
+      if (quoteLines) {
+        html += '<blockquote><p>' + quoteLines.join('<br>') + '</p></blockquote>';
+        quoteLines = null;
+      }
+    }
+    function closeBlocks() {
+      flushParagraph();
+      closeList();
+      flushQuote();
+    }
+
+    text.split('\n').forEach(function (line) {
+      var fence = line.match(/^```/);
+      if (inCode) {
+        if (fence) {
+          html += '<pre><code>' + escapeHtml(codeLines.join('\n')) + '</code></pre>';
+          codeLines = [];
+          inCode = false;
+        } else {
+          codeLines.push(line);
+        }
+        return;
+      }
+      if (fence) {
+        closeBlocks();
+        inCode = true;
+        return;
+      }
+
+      var heading = line.match(/^(#{2,4})\s+(.*)/);
+      var hr = line.match(/^(-{3,}|\*{3,})\s*$/);
+      var quote = line.match(/^>\s?(.*)/);
+      var ordered = line.match(/^\d+\.\s+(.*)/);
+      var unordered = line.match(/^[-*]\s+(.*)/);
+      var soloImage = line.trim().match(SOLO_IMAGE_RE);
+
+      if (heading) {
+        closeBlocks();
+        var level = heading[1].length + 1;
+        html += '<h' + level + '><span class="bracket" aria-hidden="true">[ </span>' +
+          renderInline(heading[2], images) + '<span class="bracket" aria-hidden="true"> ]</span></h' + level + '>';
+      } else if (hr) {
+        closeBlocks();
+        html += '<hr>';
+      } else if (soloImage) {
+        closeBlocks();
+        html += renderInline(line.trim(), images);
+      } else if (quote) {
+        flushParagraph();
+        closeList();
+        if (!quoteLines) quoteLines = [];
+        quoteLines.push(renderInline(quote[1], images));
+      } else if (ordered) {
+        flushParagraph();
+        flushQuote();
+        if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; }
+        html += '<li>' + renderInline(ordered[1], images) + '</li>';
+      } else if (unordered) {
+        flushParagraph();
+        flushQuote();
+        if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; }
+        html += '<li>' + renderInline(unordered[1], images) + '</li>';
+      } else if (line.trim() === '') {
+        closeBlocks();
+      } else {
+        closeList();
+        flushQuote();
+        paragraph.push(renderInline(line, images));
+      }
+    });
+    if (inCode) {
+      html += '<pre><code>' + escapeHtml(codeLines.join('\n')) + '</code></pre>';
+    }
+    closeBlocks();
+    return html;
+  }
+
   function openProjectModal(p) {
     projectLastFocused = document.activeElement;
     document.getElementById('modal-title-text').textContent = p.name.toLowerCase();
 
+    var images = Array.isArray(p.images) ? p.images : [];
     var mainSlot = document.getElementById('modal-main-image');
     mainSlot.textContent = '';
-    var allImages = Array.isArray(p.images) ? p.images.slice() : [];
-    var mainImageId = allImages.shift();
-    if (mainImageId) {
+    if (images[0]) {
       var mainImg = document.createElement('img');
-      mainImg.src = '/api/photo/' + mainImageId;
+      mainImg.src = '/api/photo/' + images[0];
       mainImg.alt = '';
       mainImg.loading = 'lazy';
       mainSlot.appendChild(mainImg);
@@ -219,31 +342,12 @@
 
     var detailsEl = document.getElementById('modal-details');
     detailsEl.textContent = '';
-    var chunks = (p.details || '').split(/\[image\]/i);
-    chunks.forEach(function (chunk, i) {
-      if (chunk.trim()) {
-        var para = document.createElement('p');
-        para.className = 'modal-details-text';
-        para.textContent = chunk.trim();
-        detailsEl.appendChild(para);
-      }
-      if (i < chunks.length - 1 && allImages.length) {
-        var inline = document.createElement('img');
-        inline.className = 'modal-inline-img';
-        inline.src = '/api/photo/' + allImages.shift();
-        inline.alt = '';
-        inline.loading = 'lazy';
-        detailsEl.appendChild(inline);
-      }
-    });
-    allImages.forEach(function (id) {
-      var extra = document.createElement('img');
-      extra.className = 'modal-inline-img';
-      extra.src = '/api/photo/' + id;
-      extra.alt = '';
-      extra.loading = 'lazy';
-      detailsEl.appendChild(extra);
-    });
+    if ((p.details || '').trim()) {
+      var wrap = document.createElement('div');
+      wrap.className = 'modal-details-text';
+      wrap.innerHTML = renderMarkdown(p.details.trim(), images);
+      detailsEl.appendChild(wrap);
+    }
     projectWin.style.left = '';
     projectWin.style.top = '';
     projectWin.style.transform = '';
@@ -414,12 +518,20 @@
       var cvLabel = document.createElement('span');
       cvLabel.className = 'label';
       cvLabel.textContent = 'cv';
-      var cvLink = document.createElement('a');
-      cvLink.href = '/api/cv';
-      cvLink.textContent = 'download';
+      var cvView = document.createElement('a');
+      cvView.href = '/api/cv?view=1';
+      cvView.target = '_blank';
+      cvView.rel = 'noopener';
+      cvView.textContent = 'view';
+      var cvDownload = document.createElement('a');
+      cvDownload.href = '/api/cv';
+      cvDownload.download = cv.name || 'cv.pdf';
+      cvDownload.textContent = 'download';
       cvLi.appendChild(cvLabel);
       cvLi.appendChild(document.createTextNode(' '));
-      cvLi.appendChild(cvLink);
+      cvLi.appendChild(cvView);
+      cvLi.appendChild(document.createTextNode(' · '));
+      cvLi.appendChild(cvDownload);
       document.querySelector('.contact-list').appendChild(cvLi);
     }
 

@@ -55,7 +55,7 @@
 
     <section>
       <h2><span class="bracket" aria-hidden="true">[ </span>cv<span class="bracket" aria-hidden="true"> ]</span></h2>
-      <p class="hint">upload a pdf and a “cv · download pdf” row appears in the links box.</p>
+      <p class="hint">upload a pdf and a “cv · view · download” row appears in the links box.</p>
       <p id="cv-current">checking…</p>
       <p class="cv-controls">
         <input type="file" id="cv-file" accept="application/pdf">
@@ -248,6 +248,169 @@
     return li;
   }
 
+  function escapeHtml(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  var IMAGE_RE = /!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?(?:\s+(\d+))?\)/g;
+  var SOLO_IMAGE_RE = /^!\[([^\]]*)\]\((\d+)(?:\s+(left|right))?(?:\s+(\d+))?\)$/;
+
+  function renderInline(s, images) {
+    s = escapeHtml(s);
+    s = s.replace(IMAGE_RE, function (m, alt, num, side, width) {
+      var id = images[parseInt(num, 10) - 1];
+      if (!id) return '';
+      var cls = 'modal-inline-img' + (side ? ' float-' + side : '');
+      var style = '';
+      if (width) {
+        var w = Math.max(40, Math.min(parseInt(width, 10), 1200));
+        style = ' style="width:' + w + 'px; max-width:100%; height:auto; max-height:none;"';
+      }
+      return '<img class="' + cls + '"' + style + ' loading="lazy" alt="' + alt + '" src="/api/photo/' + id + '">';
+    });
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    s = s.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    s = s.replace(/(^|[^*])\*([^*]+)\*/g, '$1<em>$2</em>');
+    s = s.replace(/~~(.+?)~~/g, '<del>$1</del>');
+    s = s.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+|\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+    return s;
+  }
+
+  function renderMarkdown(text, images) {
+    images = images || [];
+    var html = '';
+    var paragraph = [];
+    var listType = null;
+    var quoteLines = null;
+    var inCode = false;
+    var codeLines = [];
+
+    function flushParagraph() {
+      if (paragraph.length) {
+        html += '<p>' + paragraph.join('<br>') + '</p>';
+        paragraph = [];
+      }
+    }
+    function closeList() {
+      if (listType) { html += '</' + listType + '>'; listType = null; }
+    }
+    function flushQuote() {
+      if (quoteLines) {
+        html += '<blockquote><p>' + quoteLines.join('<br>') + '</p></blockquote>';
+        quoteLines = null;
+      }
+    }
+    function closeBlocks() {
+      flushParagraph();
+      closeList();
+      flushQuote();
+    }
+
+    text.split('\n').forEach(function (line) {
+      var fence = line.match(/^```/);
+      if (inCode) {
+        if (fence) {
+          html += '<pre><code>' + escapeHtml(codeLines.join('\n')) + '</code></pre>';
+          codeLines = [];
+          inCode = false;
+        } else {
+          codeLines.push(line);
+        }
+        return;
+      }
+      if (fence) {
+        closeBlocks();
+        inCode = true;
+        return;
+      }
+
+      var heading = line.match(/^(#{2,4})\s+(.*)/);
+      var hr = line.match(/^(-{3,}|\*{3,})\s*$/);
+      var quote = line.match(/^>\s?(.*)/);
+      var ordered = line.match(/^\d+\.\s+(.*)/);
+      var unordered = line.match(/^[-*]\s+(.*)/);
+      var soloImage = line.trim().match(SOLO_IMAGE_RE);
+
+      if (heading) {
+        closeBlocks();
+        var level = heading[1].length + 1;
+        html += '<h' + level + '><span class="bracket" aria-hidden="true">[ </span>' +
+          renderInline(heading[2], images) + '<span class="bracket" aria-hidden="true"> ]</span></h' + level + '>';
+      } else if (hr) {
+        closeBlocks();
+        html += '<hr>';
+      } else if (soloImage) {
+        closeBlocks();
+        html += renderInline(line.trim(), images);
+      } else if (quote) {
+        flushParagraph();
+        closeList();
+        if (!quoteLines) quoteLines = [];
+        quoteLines.push(renderInline(quote[1], images));
+      } else if (ordered) {
+        flushParagraph();
+        flushQuote();
+        if (listType !== 'ol') { closeList(); html += '<ol>'; listType = 'ol'; }
+        html += '<li>' + renderInline(ordered[1], images) + '</li>';
+      } else if (unordered) {
+        flushParagraph();
+        flushQuote();
+        if (listType !== 'ul') { closeList(); html += '<ul>'; listType = 'ul'; }
+        html += '<li>' + renderInline(unordered[1], images) + '</li>';
+      } else if (line.trim() === '') {
+        closeBlocks();
+      } else {
+        closeList();
+        flushQuote();
+        paragraph.push(renderInline(line, images));
+      }
+    });
+    if (inCode) {
+      html += '<pre><code>' + escapeHtml(codeLines.join('\n')) + '</code></pre>';
+    }
+    closeBlocks();
+    return html;
+  }
+
+  function splitBlocks(text) {
+    var lines = text.split('\n');
+    var blocks = [];
+    var i = 0;
+    while (i < lines.length) {
+      if (lines[i].trim() === '') { i++; continue; }
+      var start = i;
+      if (/^```/.test(lines[i])) {
+        i++;
+        while (i < lines.length && !/^```/.test(lines[i])) i++;
+        if (i < lines.length) i++;
+      } else if (/^\d+\.\s+/.test(lines[i])) {
+        while (i < lines.length && /^\d+\.\s+/.test(lines[i])) i++;
+      } else if (/^[-*]\s+/.test(lines[i])) {
+        while (i < lines.length && /^[-*]\s+/.test(lines[i])) i++;
+      } else if (/^>\s?/.test(lines[i])) {
+        while (i < lines.length && /^>\s?/.test(lines[i])) i++;
+      } else if (/^(#{2,4})\s+/.test(lines[i]) || /^(-{3,}|\*{3,})\s*$/.test(lines[i]) || SOLO_IMAGE_RE.test(lines[i].trim())) {
+        i++;
+      } else {
+        i++;
+        while (i < lines.length && lines[i].trim() !== '' &&
+          !/^```/.test(lines[i]) &&
+          !/^\d+\.\s+/.test(lines[i]) &&
+          !/^[-*]\s+/.test(lines[i]) &&
+          !/^>\s?/.test(lines[i]) &&
+          !/^(#{2,4})\s+/.test(lines[i]) &&
+          !/^(-{3,}|\*{3,})\s*$/.test(lines[i]) &&
+          !SOLO_IMAGE_RE.test(lines[i].trim())) {
+          i++;
+        }
+      }
+      blocks.push(lines.slice(start, i).join('\n'));
+    }
+    return blocks;
+  }
+
+  var DETAILS_TEMPLATE = '## what i built\n\n\n## my role\n\n\n## tech used\n';
+
   function repoRow(repo, selected, saved) {
     saved = saved || {};
     var li = document.createElement('li');
@@ -300,22 +463,84 @@
     var moreHint = document.createElement('p');
     moreHint.className = 'hint';
     moreHint.textContent = 'shown in a popup window when someone clicks the project title — ' +
-      'the first image below is the main image, shown at the top; type [image] anywhere ' +
-      'in the write-up to drop in the next one, in order';
+      'the first image below is the main image, always shown at the top; reference any ' +
+      'image with its number, e.g. ![a caption](2), anywhere in the write-up; add left/right ' +
+      'to float it next to text, e.g. ![a caption](2 left); add a width in px after that, e.g. ' +
+      '![a caption](2 left 250) or ![a caption](2 250) with no float. markdown: ## heading, ' +
+      '**bold**, *italic*, ~~strike~~, `code`, ```code block```, - list, 1. list, > quote, ' +
+      '[link](url), ---';
     more.appendChild(moreHint);
 
+    var detailsEditor = document.createElement('div');
+    detailsEditor.className = 'details-editor';
     var detailsTa = document.createElement('textarea');
     detailsTa.className = 'p-details';
-    detailsTa.rows = 5;
+    detailsTa.rows = 9;
     detailsTa.placeholder = "a longer write-up — design decisions, challenges, what you'd do differently…";
-    detailsTa.value = saved.details || '';
-    more.appendChild(detailsTa);
+    detailsTa.value = saved.details || DETAILS_TEMPLATE;
+    var detailsPreview = document.createElement('div');
+    detailsPreview.className = 'p-details-preview modal-details-text';
+
+    function currentImageIds() {
+      return [].map.call(imgList.querySelectorAll('.proj-img-item'), function (li) { return li.dataset.id; });
+    }
+
+    var lastBlockHtml = [];
+
+    function refreshPreview() {
+      var ids = currentImageIds();
+      var text = detailsTa.value.trim();
+      var scrollY = window.scrollY;
+
+      if (!text) {
+        if (lastBlockHtml.length) {
+          detailsPreview.innerHTML = '<p class="hint">preview appears here…</p>';
+          lastBlockHtml = [];
+        }
+        window.scrollTo(window.scrollX, scrollY);
+        return;
+      }
+
+      var newBlockHtml = splitBlocks(text).map(function (b) { return renderMarkdown(b, ids); });
+      for (var i = 0; i < newBlockHtml.length; i++) {
+        if (newBlockHtml[i] === lastBlockHtml[i]) continue;
+        var node = detailsPreview.children[i];
+        if (!node) {
+          node = document.createElement('div');
+          node.className = 'preview-block';
+          detailsPreview.appendChild(node);
+        }
+        node.innerHTML = newBlockHtml[i];
+      }
+      while (detailsPreview.children.length > newBlockHtml.length) {
+        detailsPreview.removeChild(detailsPreview.lastChild);
+      }
+
+      lastBlockHtml = newBlockHtml;
+      window.scrollTo(window.scrollX, scrollY);
+    }
+
+    function autoGrowDetailsTa() {
+      detailsTa.style.height = 'auto';
+      detailsTa.style.height = detailsTa.scrollHeight + 'px';
+    }
+
+    detailsTa.addEventListener('input', function () {
+      autoGrowDetailsTa();
+      refreshPreview();
+    });
+    detailsEditor.appendChild(detailsTa);
+    detailsEditor.appendChild(detailsPreview);
+    more.appendChild(detailsEditor);
+    more.addEventListener('toggle', autoGrowDetailsTa);
 
     var imgList = document.createElement('ul');
     imgList.className = 'project-img-list';
     (saved.images || []).forEach(function (id) { imgList.appendChild(projectImgItem(id)); });
     relabelProjectImages(imgList);
+    new MutationObserver(refreshPreview).observe(imgList, { childList: true });
     more.appendChild(imgList);
+    refreshPreview();
 
     var imgControls = document.createElement('p');
     imgControls.className = 'cv-controls';
@@ -912,7 +1137,7 @@
         description: row.querySelector('.p-description').value.trim(),
         linkUrl: val(row, 'link-url'),
         linkText: val(row, 'link-text'),
-        details: row.querySelector('.p-details').value.trim(),
+        details: (function (v) { return v === DETAILS_TEMPLATE.trim() ? '' : v; })(row.querySelector('.p-details').value.trim()),
         images: [].map.call(row.querySelectorAll('.project-img-list li'), function (li) {
           return li.dataset.id;
         }),
