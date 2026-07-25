@@ -1,91 +1,58 @@
-# Setup — edit page / GitHub SSO
+# Setup
 
-The `/edit` page (reachable via the last `☼` in the footer) lets **you** log in
-with GitHub and choose which repos show on the portfolio, with custom
-descriptions. Only the GitHub account `abueelo` is ever granted edit access —
-enforced server-side in `functions/_lib.js` (`OWNER`).
+`/edit` — GitHub SSO console, access restricted to `abueelo` (`OWNER` in `functions/_lib.js`).
 
-## 1. Create a GitHub OAuth app (once for dev, once for prod)
+## 1. GitHub OAuth app (dev + prod)
 
-GitHub → Settings → Developer settings → OAuth Apps → **New OAuth App**:
+GitHub → Settings → Developer settings → OAuth Apps → New OAuth App:
 
-| field | dev app | prod app (when deploying) |
+| field | dev | prod |
 |---|---|---|
 | Application name | `portfolio (dev)` | `portfolio` |
 | Homepage URL | `http://localhost:8788` | `https://russl.dev` |
 | Callback URL | `http://localhost:8788/api/callback` | `https://russl.dev/api/callback` |
 
-After creating: **Generate a new client secret** and keep the client id + secret handy.
+Generate a client secret, keep client id + secret.
 
-## 2. Local development
+## 2. Local dev
 
 ```sh
-cp .dev.vars.example .dev.vars     # then edit it:
+cp .dev.vars.example .dev.vars
 #   GITHUB_CLIENT_ID     = dev app client id
 #   GITHUB_CLIENT_SECRET = dev app client secret
-#   SESSION_SECRET       = output of: openssl rand -hex 32
+#   SESSION_SECRET       = openssl rand -hex 32
 
 npx wrangler pages dev . --kv PORTFOLIO_KV --r2 PHOTOS
 ```
 
-Open http://localhost:8788 — the site; http://localhost:8788/edit — the console.
-Local KV data is stored under `.wrangler/` (gitignored).
+http://localhost:8788 — site. `/edit` — console. Local KV data under `.wrangler/` (gitignored).
 
-## 3. Deploy to Cloudflare Pages (when ready)
+## 3. Deploy
 
-Deploys run via GitHub Actions (`.github/workflows/deploy.yml`) — every push
-to `main` builds nothing (there's no build step) and pushes the site + the
-`functions/` folder straight to Cloudflare Pages. **Don't also use the
-dashboard's "Connect to Git"** on this project — that would create a second,
-competing deploy pipeline for the same pushes.
+GitHub Actions (`.github/workflows/deploy.yml`) deploys on push to `main`. No build step. Don't use the dashboard's "Connect to Git" — creates a competing pipeline.
 
-1. **Create the Pages project** (one-time, no Git connection):
+1. Create the Pages project:
    ```sh
    npx wrangler login
    npx wrangler pages project create portfolio --production-branch=main
    ```
-2. **KV**: Cloudflare dashboard → Workers & Pages → KV → Create namespace
-   (call it `portfolio`). Then Pages project → Settings → Bindings → add
-   **KV namespace**: variable name `PORTFOLIO_KV` → the namespace you created.
-3. **R2** (photo storage): R2 → Create bucket (call it `portfolio-photos`;
-   free tier is 10 GB). Then Pages project → Settings → Bindings → add
-   **R2 bucket**: variable name `PHOTOS` → that bucket.
-4. **Secrets on Cloudflare**: Pages project → Settings → Environment
-   variables → add `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` (prod app
-   values) and `SESSION_SECRET` (fresh `openssl rand -hex 32`) — mark them
-   as secret, for the **Production** environment.
-   Optionally also add `GITHUB_API_TOKEN`: GitHub → Settings → Developer
-   settings → Personal access tokens → Fine-grained tokens → **Generate new
-   token**, no repository access/scopes needed (it's only used to raise the
-   rate limit on public API reads). `/api/repos` works fine without it —
-   unauthenticated GitHub API calls are just capped at 60/hr, shared across
-   everyone on Cloudflare's egress IPs, which occasionally 502s the console's
-   repo list until the 5-minute cache refreshes.
-5. **API token for the Action**: Cloudflare dashboard → profile icon →
-   **My Profile → API Tokens → Create Token → Edit Cloudflare Workers**
-   template (or a custom token scoped to **Account → Cloudflare Pages →
-   Edit**). Copy the token.
-6. **Account ID**: any page in the Cloudflare dashboard → right sidebar
-   shows your Account ID. Copy it.
-7. **GitHub secrets**: on `github.com/abueelo/portfolio` → Settings →
-   Secrets and variables → Actions → New repository secret, twice:
-   - `CLOUDFLARE_API_TOKEN` → the token from step 5
-   - `CLOUDFLARE_ACCOUNT_ID` → the ID from step 6
-8. **Domain**: Pages project → Custom domains → add `russl.dev`
-   (DNS is already on Cloudflare, so it's one click to confirm).
-   For the photo gallery, also add `photography.russl.dev` as a second
-   custom domain on the same project — a middleware serves the gallery
-   at that subdomain's root (it also always lives at /photography).
-9. Don't enable "Bot Fight Mode" / "Under Attack Mode" for the zone —
-   that's what causes the browser-check interstitial.
-10. Push to `main` (or re-run the workflow manually from the Actions tab)
-    to trigger the first deploy.
+2. KV: dashboard → Workers & Pages → KV → Create namespace `portfolio`. Pages project → Settings → Bindings → KV namespace → `PORTFOLIO_KV`.
+3. R2: R2 → Create bucket `portfolio-photos`. Pages project → Settings → Bindings → R2 bucket → `PHOTOS`.
+4. Pages env vars (Settings → Environment variables, Production, mark secret):
+   - `GITHUB_CLIENT_ID`, `GITHUB_CLIENT_SECRET` (prod app)
+   - `SESSION_SECRET` (`openssl rand -hex 32`)
+   - `GITHUB_API_TOKEN` (optional — no scopes needed, raises GitHub API rate limit from 60/hr to 5000/hr for `/api/repos`)
+5. Cloudflare API token: profile icon → My Profile → API Tokens → Create Token → Edit Cloudflare Workers template (or custom: Account → Cloudflare Pages → Edit).
+6. Account ID: dashboard right sidebar, any page.
+7. GitHub repo secrets (Settings → Secrets and variables → Actions):
+   - `CLOUDFLARE_API_TOKEN` (step 5)
+   - `CLOUDFLARE_ACCOUNT_ID` (step 6)
+8. Domain: Pages project → Custom domains → add `russl.dev` and `photography.russl.dev` (middleware serves the gallery at that subdomain's root).
+9. Leave "Bot Fight Mode" / "Under Attack Mode" off — causes a browser-check interstitial.
+10. Push to `main` or re-run the workflow manually.
 
 ## Notes
 
-- `robots.txt` already disallows `/edit` and `/api/` for crawlers, and the edit
-  page carries `noindex`.
-- Anyone can *log in* on `/edit`; anyone who isn't `abueelo` gets
-  "access denied" and no session cookie.
-- Saving writes the list to KV key `projects`; the main page fetches
-  `/api/projects` and falls back to the baked-in list if it's empty/unreachable.
+- `robots.txt` disallows `/edit` and `/api/`; edit page has `noindex`.
+- Non-owner login → "access denied", no session cookie.
+- Save writes to KV key `projects`; home page falls back to the baked-in list if empty/unreachable.
