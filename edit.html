@@ -94,6 +94,32 @@
       </p>
     </section>
 
+    <section>
+      <h2><span class="bracket" aria-hidden="true">[ </span>visibility<span class="bracket" aria-hidden="true"> ]</span></h2>
+      <p class="hint">take the whole site offline, or switch off an individual page. visitors get a
+        short "not available right now" page instead — /edit still works either way so you can turn it back on.</p>
+
+      <label class="visibility-toggle">
+        <input type="checkbox" id="site-down-toggle">
+        hide the entire site
+      </label>
+      <p class="hint stack-hint">message shown while the site is hidden — leave empty for the default:</p>
+      <input type="text" id="site-down-message" class="wide-input" maxlength="300"
+        placeholder="the site is offline for the moment — check back later."
+        aria-label="message shown while the site is hidden">
+
+      <div class="page-visibility-row">
+        <label class="visibility-toggle">
+          <input type="checkbox" id="page-hidden-photography">
+          hide /photography only
+        </label>
+        <p class="hint stack-hint">message shown for that page — leave empty for the default:</p>
+        <input type="text" id="page-message-photography" class="wide-input" maxlength="300"
+          placeholder="this page is switched off for the moment — check back later."
+          aria-label="message shown while photography is hidden">
+      </div>
+    </section>
+
     <p class="hint" id="draft-banner" hidden>
       you have unsaved local changes from <span id="draft-time"></span> —
       <button type="button" class="link-button" id="draft-restore">[ restore ]</button>
@@ -1125,6 +1151,28 @@
     return el ? el.value.trim() : '';
   }
 
+  function collectVisibility() {
+    return {
+      siteDown: $('site-down-toggle').checked,
+      siteMessage: $('site-down-message').value.trim(),
+      pages: {
+        photography: {
+          hidden: $('page-hidden-photography').checked,
+          message: $('page-message-photography').value.trim(),
+        },
+      },
+    };
+  }
+
+  function applyVisibility(v) {
+    v = v || {};
+    $('site-down-toggle').checked = !!v.siteDown;
+    $('site-down-message').value = v.siteMessage || '';
+    var photo = (v.pages && v.pages.photography) || {};
+    $('page-hidden-photography').checked = !!photo.hidden;
+    $('page-message-photography').value = photo.message || '';
+  }
+
   function collectState() {
     var projects = [];
     document.querySelectorAll('.repo-row').forEach(function (row) {
@@ -1165,10 +1213,12 @@
       };
     });
 
-    return { projects: projects, site: site, photos: photos };
+    return { projects: projects, site: site, photos: photos, visibility: collectVisibility() };
   }
 
   function applyState(state) {
+    if (state.visibility) applyVisibility(state.visibility);
+
     if (state.site) {
       $('about-input').value = state.site.about || '';
       $('photo-about-input').value = state.site.photoAbout || '';
@@ -1339,7 +1389,9 @@
       };
     });
 
-    Promise.all([put('/api/projects', projects), put('/api/site', site), put('/api/photos', photos)])
+    var visibility = collectVisibility();
+
+    Promise.all([put('/api/projects', projects), put('/api/site', site), put('/api/photos', photos), put('/api/visibility', visibility)])
       .then(function () {
         clearDraft();
         status.textContent = '☼ saved — ' + projects.length + ' project' + (projects.length === 1 ? '' : 's') + ' on display';
@@ -1371,9 +1423,11 @@
       fetch('/api/projects').then(function (r) { return r.json(); }),
       fetch('/api/site').then(function (r) { return r.json(); }),
       fetch('/api/photos').then(function (r) { return r.json(); }),
+      fetch('/api/visibility').then(function (r) { return r.json(); }),
     ]).then(function (results) {
       buildEditor(results[0], results[1], results[2] || {});
       buildPhotos(results[3] || []);
+      applyVisibility(results[4] || {});
       loadCvInfo();
       show('editor');
       checkForDraft();

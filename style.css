@@ -819,6 +819,40 @@ section h2 .bracket {
 .edit-row .c-text { flex: 1.5; }
 .edit-row .c-url { flex: 2; }
 
+.visibility-toggle {
+  display: flex;
+  align-items: center;
+  gap: 1.5ch;
+  cursor: pointer;
+  margin-bottom: 0.6rem;
+}
+
+.visibility-toggle input[type="checkbox"] {
+  appearance: none;
+  width: 1.1em;
+  height: 1.1em;
+  border: 1px solid var(--dim);
+  background: none;
+  cursor: pointer;
+  margin: 0;
+  flex: none;
+  display: grid;
+  place-items: center;
+}
+
+.visibility-toggle input[type="checkbox"]:checked::after {
+  content: "■";
+  color: var(--amber);
+  font-size: 0.75em;
+  line-height: 1;
+}
+
+.page-visibility-row {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--border);
+}
+
 .photo-row {
   display: block;
 }
