@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thom Russell</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='8' y='13' font-family='Menlo, Consolas, monospace' font-size='13' text-anchor='middle' fill='%23c9a25e'>§</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
+  </script>
+</head>
+<body data-reason="__REASON__">
+
+<header>
+  <pre class="name" aria-hidden="true">
+▀█▀ █ █ █▀█ █▀▄▀█   █▀█ █ █ █▀ █▀ █▀▀ █   █
+ █  █▀█ █▄█ █ ▀ █   █▀▄ █▄█ ▄█ ▄█ ██▄ █▄▄ █▄▄</pre>
+  <h1 class="visually-hidden">Thom Russell</h1>
+  <div class="head-row">
+  <p class="tagline"><span id="page-tagline">offline</span><span class="cursor" aria-hidden="true">█</span></p>
+
+  <nav aria-label="sections">
+    <a href="/" id="home-link" hidden><span class="key" aria-hidden="true">[h]</span> home</a>
+    <button id="theme-toggle" type="button" aria-label="toggle light/dark theme">
+      <span class="key" aria-hidden="true">[t]</span> <span class="mode">light</span>
+    </button>
+  </nav>
+  </div>
+</header>
+
+<main>
+  <section id="unavailable">
+    <h2><span class="bracket" aria-hidden="true">[ </span><span id="unavailable-title">back soon</span><span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p id="unavailable-message">this isn't available right now — check back later.</p>
+  </section>
+</main>
+
+<footer>
+  <p><span aria-hidden="true">☼ </span><a class="edit-link" href="/edit"><span class="swap">abueelo</span></a> · <span id="year">1970</span><span aria-hidden="true"> ☼</span></p>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  var root = document.documentElement;
+  var toggle = document.getElementById('theme-toggle');
+  function setTheme(theme) {
+    root.dataset.theme = theme;
+    localStorage.setItem('theme', theme);
+    toggle.querySelector('.mode').textContent = theme === 'light' ? 'dark' : 'light';
+  }
+  setTheme(root.dataset.theme);
+  toggle.addEventListener('click', function () {
+    setTheme(root.dataset.theme === 'light' ? 'dark' : 'light');
+  });
+
+  var reason = document.body.dataset.reason || 'site';
+  var homeLink = document.getElementById('home-link');
+
+  fetch('/api/visibility').then(function (r) { return r.json(); }).then(function (v) {
+    var title = document.getElementById('unavailable-title');
+    var message = document.getElementById('unavailable-message');
+    var tagline = document.getElementById('page-tagline');
+
+    if (reason.indexOf('page:') === 0) {
+      var key = reason.slice(5);
+      var page = (v.pages && v.pages[key]) || {};
+      tagline.textContent = 'not right now';
+      title.textContent = 'not right now';
+      message.textContent = page.message || 'this page is switched off for the moment — check back later.';
+      homeLink.hidden = false;
+    } else {
+      tagline.textContent = 'offline';
+      title.textContent = 'back soon';
+      message.textContent = v.siteMessage || 'the site is offline for the moment — check back later.';
+      homeLink.hidden = true;
+    }
+  }).catch(function () {});
+
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 't') { toggle.click(); return; }
+    if (e.key === 'h' && !homeLink.hidden) window.location.href = '/';
+  });
+</script>
+
+</body>
+</html>
