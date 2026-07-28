@@ -13,10 +13,11 @@ function pageKeyFor(pathname, isPhotographyHost) {
 }
 
 async function unavailableResponse(env, url, reason) {
-  const target = new URL('/unavailable.html', url);
-  target.searchParams.set('reason', reason);
-  const res = await env.ASSETS.fetch(new Request(target, { method: 'GET' }));
-  return new Response(res.body, { status: 503, headers: res.headers });
+  const res = await env.ASSETS.fetch(new Request(new URL('/unavailable.html', url), { method: 'GET' }));
+  const html = (await res.text()).replace('__REASON__', reason);
+  const headers = new Headers(res.headers);
+  headers.delete('content-length');
+  return new Response(html, { status: 503, headers });
 }
 
 export async function onRequest({ request, next, env }) {

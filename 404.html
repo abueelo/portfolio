@@ -28,9 +28,9 @@
 
 <main>
   <section id="not-found">
-    <h2><span class="bracket" aria-hidden="true">[ </span>dead end<span class="bracket" aria-hidden="true"> ]</span></h2>
-    <p>you've dug into unmapped rock — there's nothing at this path.</p>
-    <p class="links"><span class="glyph" aria-hidden="true">»</span> <a href="/">back to the surface</a></p>
+    <h2><span class="bracket" aria-hidden="true">[ </span><span id="not-found-title">dead end</span><span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p id="not-found-message">you've dug into unmapped rock — there's nothing at this path.</p>
+    <p class="links" id="not-found-link"><span class="glyph" aria-hidden="true">»</span> <a href="/"><span id="not-found-button">back to the surface</span></a></p>
   </section>
 </main>
 
@@ -58,6 +58,13 @@
     if (e.key === 't') { toggle.click(); return; }
     if (e.key === 'h') window.location.href = '/';
   });
+
+  fetch('/api/notfound').then(function (r) { return r.json(); }).then(function (n) {
+    if (n.title) document.getElementById('not-found-title').textContent = n.title;
+    if (n.message) document.getElementById('not-found-message').textContent = n.message;
+    if (n.buttonLabel) document.getElementById('not-found-button').textContent = n.buttonLabel;
+    if (!n.buttonEnabled) document.getElementById('not-found-link').hidden = true;
+  }).catch(function () {});
 </script>
 
 </body>

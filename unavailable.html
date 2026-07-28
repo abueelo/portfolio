@@ -11,13 +11,18 @@
     document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
   </script>
 </head>
-<body>
+<body data-reason="__REASON__">
 
 <header>
+  <pre class="name" aria-hidden="true">
+▀█▀ █ █ █▀█ █▀▄▀█   █▀█ █ █ █▀ █▀ █▀▀ █   █
+ █  █▀█ █▄█ █ ▀ █   █▀▄ █▄█ ▄█ ▄█ ██▄ █▄▄ █▄▄</pre>
+  <h1 class="visually-hidden">Thom Russell</h1>
   <div class="head-row">
   <p class="tagline"><span id="page-tagline">offline</span><span class="cursor" aria-hidden="true">█</span></p>
 
   <nav aria-label="sections">
+    <a href="/" id="home-link" hidden><span class="key" aria-hidden="true">[h]</span> home</a>
     <button id="theme-toggle" type="button" aria-label="toggle light/dark theme">
       <span class="key" aria-hidden="true">[t]</span> <span class="mode">light</span>
     </button>
@@ -29,7 +34,6 @@
   <section id="unavailable">
     <h2><span class="bracket" aria-hidden="true">[ </span><span id="unavailable-title">back soon</span><span class="bracket" aria-hidden="true"> ]</span></h2>
     <p id="unavailable-message">this isn't available right now — check back later.</p>
-    <p class="links"><span class="glyph" aria-hidden="true">»</span> <a href="/">back to the surface</a></p>
   </section>
 </main>
 
@@ -52,7 +56,8 @@
     setTheme(root.dataset.theme === 'light' ? 'dark' : 'light');
   });
 
-  var reason = new URLSearchParams(location.search).get('reason') || 'site';
+  var reason = document.body.dataset.reason || 'site';
+  var homeLink = document.getElementById('home-link');
 
   fetch('/api/visibility').then(function (r) { return r.json(); }).then(function (v) {
     var title = document.getElementById('unavailable-title');
@@ -65,12 +70,20 @@
       tagline.textContent = 'not right now';
       title.textContent = 'not right now';
       message.textContent = page.message || 'this page is switched off for the moment — check back later.';
+      homeLink.hidden = false;
     } else {
       tagline.textContent = 'offline';
       title.textContent = 'back soon';
       message.textContent = v.siteMessage || 'the site is offline for the moment — check back later.';
+      homeLink.hidden = true;
     }
   }).catch(function () {});
+
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 't') { toggle.click(); return; }
+    if (e.key === 'h' && !homeLink.hidden) window.location.href = '/';
+  });
 </script>
 
 </body>
