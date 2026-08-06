@@ -1126,4 +1126,8 @@ footer { animation-delay: 0.32s; }
     flex-direction: column;
     gap: 0;
   }
+
+  .photo-meta {
+    white-space: normal;
+  }
 }
