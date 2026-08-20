@@ -872,6 +872,19 @@ section h2 .bracket {
 .photo-row-meta .p-camera { flex: 1; }
 .photo-row-meta .p-settings { flex: 1.4; }
 
+.photo-hide-toggle {
+  flex: none;
+  margin-bottom: 0;
+  font-size: 0.85rem;
+  color: var(--dim);
+}
+
+.photo-row-hidden .photo-row-main,
+.photo-row-hidden .p-camera,
+.photo-row-hidden .p-settings {
+  opacity: 0.5;
+}
+
 .row-controls {
   display: flex;
   gap: 0.5ch;

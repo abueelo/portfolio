@@ -85,7 +85,7 @@
       <p class="hint">about text shown at the top of /photography — leave empty to keep the default:</p>
       <textarea id="photo-about-input" rows="3" placeholder="When I'm not designing hardware I'm usually out with a camera…" aria-label="photography about text"></textarea>
       <p class="hint stack-hint">photos · uploads are resized to 2400px · ▲▼ set the order ·
-        × removes the photo when you save</p>
+        hide from gallery keeps the photo but takes it off /photography · × removes the photo when you save</p>
       <ul id="photo-list" class="edit-rows"></ul>
       <p class="cv-controls">
         <input type="file" id="photo-file" accept="image/*" multiple>
@@ -684,6 +684,21 @@
     meta.appendChild(input('p-camera', 'camera (e.g. Canon R6 Mk2)', photo.camera));
     meta.appendChild(input('p-settings', 'settings (e.g. 50mm f/1.8 · 1/500s · ISO 200)', photo.settings));
 
+    var hideLabel = document.createElement('label');
+    hideLabel.className = 'visibility-toggle photo-hide-toggle';
+    var hideCheck = document.createElement('input');
+    hideCheck.type = 'checkbox';
+    hideCheck.className = 'p-hidden';
+    hideCheck.checked = !!photo.hidden;
+    hideCheck.addEventListener('change', function () {
+      li.classList.toggle('photo-row-hidden', hideCheck.checked);
+    });
+    hideLabel.appendChild(hideCheck);
+    hideLabel.appendChild(document.createTextNode('hide from gallery'));
+    meta.appendChild(hideLabel);
+
+    if (photo.hidden) li.classList.add('photo-row-hidden');
+
     li.appendChild(main);
     li.appendChild(meta);
     return li;
@@ -1246,6 +1261,7 @@
         taken: val(row, 'p-taken'),
         camera: val(row, 'p-camera'),
         settings: val(row, 'p-settings'),
+        hidden: row.querySelector('.p-hidden').checked,
       };
     });
 
@@ -1306,6 +1322,9 @@
         row.querySelector('.p-taken').value = p.taken || '';
         row.querySelector('.p-camera').value = p.camera || '';
         row.querySelector('.p-settings').value = p.settings || '';
+        var hideCheck = row.querySelector('.p-hidden');
+        hideCheck.checked = !!p.hidden;
+        row.classList.toggle('photo-row-hidden', hideCheck.checked);
       });
     }
   }
@@ -1423,6 +1442,7 @@
         taken: val(row, 'p-taken'),
         camera: val(row, 'p-camera'),
         settings: val(row, 'p-settings'),
+        hidden: row.querySelector('.p-hidden').checked,
       };
     });
 
@@ -1460,7 +1480,7 @@
       fetch('/api/repos').then(function (r) { return r.json(); }),
       fetch('/api/projects').then(function (r) { return r.json(); }),
       fetch('/api/site').then(function (r) { return r.json(); }),
-      fetch('/api/photos').then(function (r) { return r.json(); }),
+      fetch('/api/photos?all=1').then(function (r) { return r.json(); }),
       fetch('/api/visibility').then(function (r) { return r.json(); }),
       fetch('/api/notfound').then(function (r) { return r.json(); }),
     ]).then(function (results) {
