@@ -690,6 +690,7 @@
     handle.setPointerCapture(pointerId);
 
     var pointerStartDocY = e.clientY + window.scrollY;
+    var startClientY = e.clientY;
     var offsetAdjust = 0;
     var lastClientY = e.clientY;
     var rafId = null;
@@ -734,8 +735,8 @@
 
     function tick() {
       var vh = window.innerHeight, edge = 72, speed = 0;
-      if (lastClientY < edge) speed = -18 * (1 - lastClientY / edge);
-      else if (lastClientY > vh - edge) speed = 18 * (1 - (vh - lastClientY) / edge);
+      if (lastClientY < edge && startClientY - lastClientY > 4) speed = -18 * (1 - lastClientY / edge);
+      else if (lastClientY > vh - edge && lastClientY - startClientY > 4) speed = 18 * (1 - (vh - lastClientY) / edge);
       if (speed) window.scrollBy(0, speed);
       applyTransform();
       trySwap();
