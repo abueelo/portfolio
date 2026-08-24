@@ -892,6 +892,43 @@ section h2 .bracket {
   margin-left: auto;
 }
 
+.drag-handle {
+  font: inherit;
+  font-size: 0.8rem;
+  color: var(--dim);
+  background: none;
+  border: 1px solid var(--border);
+  padding: 0 0.6ch;
+  cursor: move;
+  flex: none;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.drag-handle:hover,
+.drag-handle:focus-visible {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+.photo-row-dragging {
+  position: relative;
+  z-index: 5;
+  outline: 1px solid var(--amber);
+  outline-offset: 2px;
+}
+
+.photo-row-dragging .drag-handle {
+  color: var(--amber);
+  border-color: var(--amber);
+}
+
+.photo-dragging,
+.photo-dragging * {
+  cursor: move !important;
+}
+
 .cv-controls {
   display: flex;
   align-items: center;

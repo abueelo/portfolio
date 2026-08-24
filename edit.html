@@ -84,7 +84,7 @@
       <h2><span class="bracket" aria-hidden="true">[ </span>photography<span class="bracket" aria-hidden="true"> ]</span></h2>
       <p class="hint">about text shown at the top of /photography — leave empty to keep the default:</p>
       <textarea id="photo-about-input" rows="3" placeholder="When I'm not designing hardware I'm usually out with a camera…" aria-label="photography about text"></textarea>
-      <p class="hint stack-hint">photos · uploads are resized to 2400px · ▲▼ set the order ·
+      <p class="hint stack-hint">photos · uploads are resized to 2400px · drag ≡ to reorder ·
         hide from gallery keeps the photo but takes it off /photography · × removes the photo when you save</p>
       <ul id="photo-list" class="edit-rows"></ul>
       <p class="cv-controls">
@@ -229,10 +229,19 @@
     return el;
   }
 
-  function controls(li, name, removable, describe) {
+  function moveRow(li, dir) {
+    var target = dir < 0 ? li.previousElementSibling : li.nextElementSibling;
+    if (!target) return false;
+    if (dir < 0) li.parentNode.insertBefore(li, target);
+    else li.parentNode.insertBefore(target, li);
+    return true;
+  }
+
+  function controls(li, name, removable, describe, orderButtons) {
     var wrap = document.createElement('span');
     wrap.className = 'row-controls';
-    var specs = [['▲', 'move ' + name + ' up'], ['▼', 'move ' + name + ' down']];
+    var specs = [];
+    if (orderButtons !== false) specs.push(['▲', 'move ' + name + ' up'], ['▼', 'move ' + name + ' down']);
     if (removable) specs.push(['×', 'remove ' + name]);
     specs.forEach(function (spec) {
         var b = document.createElement('button');
@@ -248,10 +257,7 @@
             });
             return;
           }
-          var target = spec[0] === '▲' ? li.previousElementSibling : li.nextElementSibling;
-          if (!target) return;
-          if (spec[0] === '▲') li.parentNode.insertBefore(li, target);
-          else li.parentNode.insertBefore(target, li);
+          moveRow(li, spec[0] === '▲' ? -1 : 1);
         });
         wrap.appendChild(b);
       });
@@ -659,6 +665,107 @@
     return li;
   }
 
+  function dragHandle(li) {
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'drag-handle';
+    b.textContent = '≡';
+    b.setAttribute('aria-label', 'reorder this photo — drag, or use the arrow keys');
+    b.addEventListener('keydown', function (e) {
+      if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+      e.preventDefault();
+      moveRow(li, e.key === 'ArrowUp' ? -1 : 1);
+    });
+    b.addEventListener('pointerdown', function (e) {
+      if (e.button !== 0) return;
+      startPhotoDrag(e, li, b);
+    });
+    return b;
+  }
+
+  function startPhotoDrag(e, li, handle) {
+    e.preventDefault();
+    var list = li.parentNode;
+    var pointerId = e.pointerId;
+    handle.setPointerCapture(pointerId);
+
+    var pointerStartDocY = e.clientY + window.scrollY;
+    var offsetAdjust = 0;
+    var lastClientY = e.clientY;
+    var rafId = null;
+
+    li.classList.add('photo-row-dragging');
+    document.body.classList.add('photo-dragging');
+
+    function applyTransform() {
+      var docY = lastClientY + window.scrollY;
+      li.style.transform = 'translateY(' + (docY - pointerStartDocY - offsetAdjust) + 'px)';
+    }
+
+    function trySwap() {
+      var moved = true;
+      while (moved) {
+        moved = false;
+        var rect = li.getBoundingClientRect();
+        var center = rect.top + rect.height / 2;
+        var prev = li.previousElementSibling;
+        if (prev) {
+          var prevRect = prev.getBoundingClientRect();
+          if (center < prevRect.top + prevRect.height / 2) {
+            var before = li.offsetTop;
+            list.insertBefore(li, prev);
+            offsetAdjust += li.offsetTop - before;
+            moved = true;
+            continue;
+          }
+        }
+        var next = li.nextElementSibling;
+        if (next) {
+          var nextRect = next.getBoundingClientRect();
+          if (center > nextRect.top + nextRect.height / 2) {
+            var before2 = li.offsetTop;
+            list.insertBefore(next, li);
+            offsetAdjust += li.offsetTop - before2;
+            moved = true;
+          }
+        }
+      }
+    }
+
+    function tick() {
+      var vh = window.innerHeight, edge = 72, speed = 0;
+      if (lastClientY < edge) speed = -18 * (1 - lastClientY / edge);
+      else if (lastClientY > vh - edge) speed = 18 * (1 - (vh - lastClientY) / edge);
+      if (speed) window.scrollBy(0, speed);
+      applyTransform();
+      trySwap();
+      rafId = requestAnimationFrame(tick);
+    }
+    rafId = requestAnimationFrame(tick);
+
+    function onMove(ev) {
+      if (ev.pointerId === pointerId) lastClientY = ev.clientY;
+    }
+    function cleanup() {
+      cancelAnimationFrame(rafId);
+      li.style.transform = '';
+      li.classList.remove('photo-row-dragging');
+      document.body.classList.remove('photo-dragging');
+      handle.removeEventListener('pointermove', onMove);
+      handle.removeEventListener('pointerup', onUp);
+      handle.removeEventListener('pointercancel', onUp);
+      handle.removeEventListener('lostpointercapture', onUp);
+    }
+    function onUp(ev) {
+      if (ev.pointerId === pointerId) cleanup();
+    }
+
+    handle.addEventListener('pointermove', onMove);
+    handle.addEventListener('pointerup', onUp);
+    handle.addEventListener('pointercancel', onUp);
+    handle.addEventListener('lostpointercapture', onUp);
+  }
+
   function photoRow(photo) {
     var li = document.createElement('li');
     li.className = 'edit-row photo-row';
@@ -666,6 +773,7 @@
 
     var main = document.createElement('div');
     main.className = 'photo-row-main';
+    main.appendChild(dragHandle(li));
     var thumb = document.createElement('img');
     thumb.className = 'photo-thumb';
     thumb.src = '/api/photo/' + photo.id;
@@ -677,7 +785,7 @@
     main.appendChild(controls(li, 'this photo', true, function () {
       var title = li.querySelector('.p-title').value.trim();
       return title ? '"' + title + '"' : 'this photo';
-    }));
+    }, false));
 
     var meta = document.createElement('div');
     meta.className = 'photo-row-meta';
