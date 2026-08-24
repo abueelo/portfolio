@@ -714,8 +714,9 @@
           var prevRect = prev.getBoundingClientRect();
           if (center < prevRect.top + prevRect.height / 2) {
             var before = li.offsetTop;
-            list.insertBefore(li, prev);
+            list.insertBefore(prev, li.nextElementSibling);
             offsetAdjust += li.offsetTop - before;
+            applyTransform();
             moved = true;
             continue;
           }
@@ -727,6 +728,7 @@
             var before2 = li.offsetTop;
             list.insertBefore(next, li);
             offsetAdjust += li.offsetTop - before2;
+            applyTransform();
             moved = true;
           }
         }
