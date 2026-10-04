@@ -87,7 +87,7 @@
       <h2><span class="bracket" aria-hidden="true">[ </span>photography<span class="bracket" aria-hidden="true"> ]</span></h2>
       <p class="hint">about text shown at the top of /photography — leave empty to keep the default:</p>
       <textarea id="photo-about-input" rows="3" placeholder="When I'm not designing hardware I'm usually out with a camera…" aria-label="photography about text"></textarea>
-      <p class="hint stack-hint">photos · uploads are resized to 2400px · drag ≡ to reorder ·
+      <p class="hint stack-hint">photos · uploads are resized to 2400px, gifs are left alone · drag ≡ to reorder ·
         hide from gallery keeps the photo but takes it off /photography · × removes the photo when you save</p>
       <ul id="photo-list" class="edit-rows"></ul>
       <p class="cv-controls">
@@ -561,7 +561,8 @@
     var moreHint = document.createElement('p');
     moreHint.className = 'hint';
     moreHint.textContent = 'shown in a popup window when someone clicks the project title — ' +
-      'the first image below is the main image, always shown at the top; reference any ' +
+      'the first image below is the main image, always shown at the top; gifs go up as they ' +
+      'are and keep animating; reference any ' +
       'image with its number, e.g. ![a caption](2), anywhere in the write-up; add left/right ' +
       'to float it next to text, e.g. ![a caption](2 left); add a width in px after that, e.g. ' +
       '![a caption](2 left 250) or ![a caption](2 250) with no float. markdown: ## heading, ' +
@@ -1169,13 +1170,21 @@
   }
 
   function isAcceptedImage(file) {
-    if (file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/heic' || file.type === 'image/heif') return true;
-    return /\.(jpe?g|png|heic|heif)$/i.test(file.name || '');
+    if (file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/heic' ||
+        file.type === 'image/heif' || file.type === 'image/gif') return true;
+    return /\.(jpe?g|png|heic|heif|gif)$/i.test(file.name || '');
+  }
+
+  function isGif(file) {
+    return file.type === 'image/gif' || /\.gif$/i.test(file.name || '');
   }
 
   function resizePhoto(file) {
-    if (!isAcceptedImage(file)) return Promise.reject(new Error('only jpg, png, and heic files are accepted'));
+    if (!isAcceptedImage(file)) return Promise.reject(new Error('only jpg, png, heic, and gif files are accepted'));
     return createImageBitmap(file).then(function (bmp) {
+      if (isGif(file)) {
+        return { blob: file, width: bmp.width, height: bmp.height };
+      }
       var MAXD = 2400;
       var scale = Math.min(1, MAXD / Math.max(bmp.width, bmp.height));
       var width = Math.round(bmp.width * scale);
