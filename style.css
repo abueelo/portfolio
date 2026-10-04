@@ -648,11 +648,28 @@ section h2 .bracket {
   margin-top: 0.5rem;
 }
 
-.details-editor .p-details {
+.details-editor .details-input {
   flex: 1 1 260px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.details-editor .p-details {
   margin-top: 0;
   overflow: hidden;
   resize: none;
+}
+
+.char-count {
+  margin-top: 0.3rem;
+  color: var(--dim);
+  font-size: 0.8rem;
+  text-align: right;
+}
+
+.char-count.over {
+  color: var(--amber);
 }
 
 .p-details-preview {
@@ -1025,6 +1042,10 @@ section h2 .bracket {
 #status {
   color: var(--dim);
   margin-left: 1ch;
+}
+
+#status.error {
+  color: var(--amber);
 }
 
 .session-line {

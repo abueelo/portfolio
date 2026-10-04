@@ -469,6 +469,29 @@
   }
 
   var DETAILS_TEMPLATE = '## what i built\n\n\n## my role\n\n\n## tech used\n';
+  var DETAILS_MAX = 20000;
+  var DESCRIPTION_MAX = 2000;
+
+  function count(n) {
+    return n.toLocaleString('en-GB');
+  }
+
+  function charCount(field, max) {
+    var el = document.createElement('p');
+    el.className = 'char-count';
+    function refresh() {
+      var n = field.value.trim().length;
+      var over = n - max;
+      el.hidden = n === 0;
+      el.textContent = over > 0
+        ? count(n) + ' / ' + count(max) + ' · ' + count(over) + ' over'
+        : count(n) + ' / ' + count(max);
+      el.classList.toggle('over', over > 0);
+    }
+    field.addEventListener('input', refresh);
+    refresh();
+    return el;
+  }
 
   function newProjectId() {
     var bytes = crypto.getRandomValues(new Uint8Array(4));
@@ -532,6 +555,7 @@
     ta.rows = 2;
     ta.placeholder = repo.blurb || 'description shown on the portfolio…';
     ta.value = saved.description || '';
+    var taCount = charCount(ta, DESCRIPTION_MAX);
 
     var urlRow = null;
     if (custom) {
@@ -579,6 +603,10 @@
     detailsTa.value = saved.details || DETAILS_TEMPLATE;
     var detailsPreview = document.createElement('div');
     detailsPreview.className = 'p-details-preview modal-details-text';
+
+    var detailsInput = document.createElement('div');
+    detailsInput.className = 'details-input';
+    var detailsCount = charCount(detailsTa, DETAILS_MAX);
 
     function currentImageIds() {
       return [].map.call(imgList.querySelectorAll('.proj-img-item'), function (li) { return li.dataset.id; });
@@ -628,7 +656,9 @@
       autoGrowDetailsTa();
       refreshPreview();
     });
-    detailsEditor.appendChild(detailsTa);
+    detailsInput.appendChild(detailsTa);
+    detailsInput.appendChild(detailsCount);
+    detailsEditor.appendChild(detailsInput);
     detailsEditor.appendChild(detailsPreview);
     more.appendChild(detailsEditor);
     more.addEventListener('toggle', autoGrowDetailsTa);
@@ -689,6 +719,7 @@
 
     li.appendChild(head);
     li.appendChild(ta);
+    li.appendChild(taCount);
     if (urlRow) li.appendChild(urlRow);
     li.appendChild(linkRow);
     li.appendChild(more);
@@ -1487,7 +1518,9 @@
           row.querySelector('.p-language').value = p.language || '';
         }
         row.querySelector('input[type="checkbox"]').checked = p.checked;
-        row.querySelector('.p-description').value = p.description || '';
+        var descTa = row.querySelector('.p-description');
+        descTa.value = p.description || '';
+        descTa.dispatchEvent(new Event('input', { bubbles: true }));
         row.querySelector('.link-url').value = p.linkUrl || '';
         row.querySelector('.link-text').value = p.linkText || '';
         var detailsTa = row.querySelector('.p-details');
@@ -1576,10 +1609,12 @@
 
   $('save').addEventListener('click', function () {
     var status = $('status');
+    status.classList.remove('error');
     status.textContent = 'saving…';
 
     var projects = [];
     var missingName = false;
+    var tooLong = [];
     document.querySelectorAll('.repo-row').forEach(function (row) {
       var custom = row.classList.contains('custom-row');
       var ticked = row.querySelector('input[type="checkbox"]').checked;
@@ -1612,11 +1647,42 @@
       p.images = [].map.call(row.querySelectorAll('.project-img-list li'), function (li) {
         return li.dataset.id;
       });
+      if (p.description.length > DESCRIPTION_MAX) {
+        tooLong.push({
+          name: p.name, field: 'description', length: p.description.length,
+          max: DESCRIPTION_MAX, row: row,
+        });
+      }
+      if (p.details.length > DETAILS_MAX) {
+        tooLong.push({
+          name: p.name, field: 'write-up', length: p.details.length,
+          max: DETAILS_MAX, row: row, inDetails: true,
+        });
+      }
       projects.push(p);
     });
 
     if (missingName) {
+      status.classList.add('error');
       status.textContent = 'every added project needs a name before you can save.';
+      return;
+    }
+
+    if (tooLong.length) {
+      tooLong.forEach(function (t) {
+        if (t.inDetails) t.row.querySelector('.project-more').open = true;
+      });
+      status.classList.add('error');
+      status.textContent = tooLong.length === 1
+        ? 'the ' + tooLong[0].field + ' for "' + tooLong[0].name + '" is ' +
+          count(tooLong[0].length) + ' characters — ' +
+          count(tooLong[0].length - tooLong[0].max) + ' over the ' +
+          count(tooLong[0].max) + ' limit. nothing was saved.'
+        : 'these are over the character limit: ' +
+          tooLong.map(function (t) {
+            return '"' + t.name + '" ' + t.field + ' (' + count(t.length) + ' / ' + count(t.max) + ')';
+          }).join(', ') + '. nothing was saved.';
+      tooLong[0].row.scrollIntoView({ block: 'center' });
       return;
     }
 
