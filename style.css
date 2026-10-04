@@ -740,6 +740,25 @@ section h2 .bracket {
   color: var(--dim);
 }
 
+.custom-row .repo-head label {
+  flex: none;
+}
+
+.custom-row .p-name {
+  flex: 1;
+  min-width: 0;
+}
+
+.custom-row .p-language {
+  flex: 0 0 14ch;
+  min-width: 0;
+  font-size: 0.85rem;
+}
+
+#editor .custom-row:not(:has(input:checked)) .p-name {
+  color: var(--dim);
+}
+
 .mv {
   font: inherit;
   font-size: 0.8rem;
@@ -797,6 +816,7 @@ section h2 .bracket {
 
 .link-row .link-url { flex: 2; }
 .link-row .link-text { flex: 1; }
+.link-row .p-url { flex: 1; }
 
 .edit-rows {
   list-style: none;
@@ -1173,6 +1193,15 @@ footer { animation-delay: 0.32s; }
   }
 
   .edit-row input {
+    flex-basis: 100%;
+  }
+
+  .custom-row .repo-head {
+    flex-wrap: wrap;
+  }
+
+  .custom-row .p-language {
+    order: 1;
     flex-basis: 100%;
   }
 

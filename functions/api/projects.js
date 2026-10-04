@@ -1,16 +1,20 @@
-import { requireOwner, json, validImageId } from '../_lib.js';
+import { requireOwner, json, validImageId, validShortId } from '../_lib.js';
 
 const KEY = 'projects';
 const MAX_PROJECTS = 30;
 const MAX_IMAGES = 10;
 const MAX_LEN = {
   name: 100, url: 300, language: 60, homepage: 300, description: 2000,
-  linkUrl: 300, linkText: 40, details: 4000,
+  blurb: 2000, linkUrl: 300, linkText: 40, details: 20000,
 };
 
-export async function onRequestGet({ env }) {
-  const projects = await env.PORTFOLIO_KV.get(KEY, 'json');
-  return json(projects || []);
+export async function onRequestGet({ request, env }) {
+  const projects = (await env.PORTFOLIO_KV.get(KEY, 'json')) || [];
+  const url = new URL(request.url);
+  if (url.searchParams.get('all') && (await requireOwner(request, env))) {
+    return json(projects);
+  }
+  return json(projects.filter(p => !p.hidden));
 }
 
 export async function onRequestPut({ request, env }) {
@@ -34,17 +38,28 @@ export async function onRequestPut({ request, env }) {
 
   const clean = [];
   const newImageIds = new Set();
+  const seenIds = new Set();
   for (const p of body) {
-    if (!p || typeof p.name !== 'string' || typeof p.url !== 'string') {
-      return json({ error: 'each project needs a name and url' }, { status: 400 });
-    }
-    if (!p.url.startsWith('https://github.com/')) {
-      return json({ error: 'project urls must point at github' }, { status: 400 });
+    if (!p || typeof p.name !== 'string' || !p.name.trim()) {
+      return json({ error: 'every project needs a name' }, { status: 400 });
     }
     const field = (key) => {
       const v = p[key];
       return typeof v === 'string' && v.trim() ? v.trim().slice(0, MAX_LEN[key]) : null;
     };
+    const custom = !!p.custom;
+    const url = field('url');
+    if (custom) {
+      if (!validShortId(p.id) || seenIds.has(p.id)) {
+        return json({ error: 'missing or duplicate project id' }, { status: 400 });
+      }
+      seenIds.add(p.id);
+      if (url && !/^https?:\/\//.test(url)) {
+        return json({ error: 'project links must start with http(s)://' }, { status: 400 });
+      }
+    } else if (!url || !url.startsWith('https://github.com/')) {
+      return json({ error: 'project urls must point at github' }, { status: 400 });
+    }
     const linkUrl = field('linkUrl');
     if (linkUrl && !/^https?:\/\//.test(linkUrl)) {
       return json({ error: 'custom links must start with http(s)://' }, { status: 400 });
@@ -58,18 +73,24 @@ export async function onRequestPut({ request, env }) {
       newImageIds.add(id);
     }
 
-    clean.push({
-      name: p.name.slice(0, MAX_LEN.name),
-      url: p.url.slice(0, MAX_LEN.url),
+    const entry = {
+      name: p.name.trim().slice(0, MAX_LEN.name),
+      url,
       language: field('language'),
-      homepage: field('homepage'),
-      blurb: field('blurb'),
+      homepage: custom ? null : field('homepage'),
+      blurb: custom ? null : field('blurb'),
       description: field('description'),
       linkUrl,
       linkText: field('linkText'),
       details: field('details'),
       images,
-    });
+    };
+    if (custom) {
+      entry.custom = true;
+      entry.id = p.id;
+      entry.hidden = !!p.hidden;
+    }
+    clean.push(entry);
   }
 
   for (const id of oldImageIds) {

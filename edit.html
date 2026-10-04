@@ -68,8 +68,11 @@
     <section>
       <h2><span class="bracket" aria-hidden="true">[ </span>projects<span class="bracket" aria-hidden="true"> ]</span></h2>
       <p class="hint">tick a repo to show it on the portfolio · ▲▼ set the order ·
-        the optional link (with its own text) shows next to “code”</p>
+        the optional link (with its own text) shows next to “code” ·
+        add a project for anything that isn’t a repo of yours — hardware, no repo,
+        or a group member’s repo</p>
       <ul id="repo-list"></ul>
+      <p><button type="button" class="add" id="project-add">[ + add project ]</button></p>
     </section>
 
     <section>
@@ -84,7 +87,7 @@
       <h2><span class="bracket" aria-hidden="true">[ </span>photography<span class="bracket" aria-hidden="true"> ]</span></h2>
       <p class="hint">about text shown at the top of /photography — leave empty to keep the default:</p>
       <textarea id="photo-about-input" rows="3" placeholder="When I'm not designing hardware I'm usually out with a camera…" aria-label="photography about text"></textarea>
-      <p class="hint stack-hint">photos · uploads are resized to 2400px · drag ≡ to reorder ·
+      <p class="hint stack-hint">photos · uploads are resized to 2400px, gifs are left alone · drag ≡ to reorder ·
         hide from gallery keeps the photo but takes it off /photography · × removes the photo when you save</p>
       <ul id="photo-list" class="edit-rows"></ul>
       <p class="cv-controls">
@@ -467,11 +470,24 @@
 
   var DETAILS_TEMPLATE = '## what i built\n\n\n## my role\n\n\n## tech used\n';
 
-  function repoRow(repo, selected, saved) {
+  function newProjectId() {
+    var bytes = crypto.getRandomValues(new Uint8Array(4));
+    var rand = [].map.call(bytes, function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+    return Date.now().toString(36) + '-' + rand;
+  }
+
+  function repoRow(repo, selected, saved, custom) {
     saved = saved || {};
     var li = document.createElement('li');
     li.className = 'repo-row';
-    li.dataset.repo = JSON.stringify(repo);
+    if (custom) {
+      li.classList.add('custom-row');
+      li.dataset.id = repo.id || newProjectId();
+      li.dataset.key = 'custom:' + li.dataset.id;
+    } else {
+      li.dataset.repo = JSON.stringify(repo);
+      li.dataset.key = 'repo:' + repo.name;
+    }
 
     var head = document.createElement('div');
     head.className = 'repo-head';
@@ -480,25 +496,51 @@
     var box = document.createElement('input');
     box.type = 'checkbox';
     box.checked = selected;
-    var name = document.createElement('span');
-    name.className = 'repo-name';
-    name.textContent = repo.name;
     label.appendChild(box);
-    label.appendChild(name);
 
-    var lang = document.createElement('span');
-    lang.className = 'lang';
-    lang.textContent = repo.language ? repo.language.toLowerCase() : '';
+    var name;
+    var lang;
+    if (custom) {
+      box.setAttribute('aria-label', 'show this project on the portfolio');
+      name = input('p-name', 'project name', repo.name);
+      name.maxLength = 100;
+      lang = input('p-language', 'tag — e.g. kicad', repo.language);
+      lang.maxLength = 60;
+      head.appendChild(label);
+      head.appendChild(name);
+    } else {
+      name = document.createElement('span');
+      name.className = 'repo-name';
+      name.textContent = repo.name;
+      label.appendChild(name);
+      lang = document.createElement('span');
+      lang.className = 'lang';
+      lang.textContent = repo.language ? repo.language.toLowerCase() : '';
+      head.appendChild(label);
+    }
 
-    head.appendChild(label);
     head.appendChild(lang);
-    head.appendChild(controls(li, repo.name, false));
+    head.appendChild(custom
+      ? controls(li, 'this project', true, function () {
+          var typed = li.querySelector('.p-name').value.trim();
+          return typed ? '"' + typed + '"' : 'this project';
+        })
+      : controls(li, repo.name, false));
 
     var ta = document.createElement('textarea');
     ta.className = 'p-description';
     ta.rows = 2;
     ta.placeholder = repo.blurb || 'description shown on the portfolio…';
     ta.value = saved.description || '';
+
+    var urlRow = null;
+    if (custom) {
+      urlRow = document.createElement('div');
+      urlRow.className = 'link-row';
+      var pUrl = input('p-url', 'optional code link — a repo, even someone else’s', repo.url, 'url');
+      pUrl.maxLength = 300;
+      urlRow.appendChild(pUrl);
+    }
 
     var linkRow = document.createElement('div');
     linkRow.className = 'link-row';
@@ -519,7 +561,8 @@
     var moreHint = document.createElement('p');
     moreHint.className = 'hint';
     moreHint.textContent = 'shown in a popup window when someone clicks the project title — ' +
-      'the first image below is the main image, always shown at the top; reference any ' +
+      'the first image below is the main image, always shown at the top; gifs go up as they ' +
+      'are and keep animating; reference any ' +
       'image with its number, e.g. ![a caption](2), anywhere in the write-up; add left/right ' +
       'to float it next to text, e.g. ![a caption](2 left); add a width in px after that, e.g. ' +
       '![a caption](2 left 250) or ![a caption](2 250) with no float. markdown: ## heading, ' +
@@ -646,6 +689,7 @@
 
     li.appendChild(head);
     li.appendChild(ta);
+    if (urlRow) li.appendChild(urlRow);
     li.appendChild(linkRow);
     li.appendChild(more);
     return li;
@@ -1126,13 +1170,21 @@
   }
 
   function isAcceptedImage(file) {
-    if (file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/heic' || file.type === 'image/heif') return true;
-    return /\.(jpe?g|png|heic|heif)$/i.test(file.name || '');
+    if (file.type === 'image/jpeg' || file.type === 'image/png' || file.type === 'image/heic' ||
+        file.type === 'image/heif' || file.type === 'image/gif') return true;
+    return /\.(jpe?g|png|heic|heif|gif)$/i.test(file.name || '');
+  }
+
+  function isGif(file) {
+    return file.type === 'image/gif' || /\.gif$/i.test(file.name || '');
   }
 
   function resizePhoto(file) {
-    if (!isAcceptedImage(file)) return Promise.reject(new Error('only jpg, png, and heic files are accepted'));
+    if (!isAcceptedImage(file)) return Promise.reject(new Error('only jpg, png, heic, and gif files are accepted'));
     return createImageBitmap(file).then(function (bmp) {
+      if (isGif(file)) {
+        return { blob: file, width: bmp.width, height: bmp.height };
+      }
       var MAXD = 2400;
       var scale = Math.min(1, MAXD / Math.max(bmp.width, bmp.height));
       var width = Math.round(bmp.width * scale);
@@ -1177,6 +1229,10 @@
     var byName = {};
     repos.forEach(function (r) { byName[r.name] = r; });
     projects.forEach(function (p) {
+      if (p.custom) {
+        list.appendChild(repoRow(p, !p.hidden, p, true));
+        return;
+      }
       var repo = byName[p.name] || p;
       delete byName[p.name];
       list.appendChild(repoRow(repo, true, p));
@@ -1199,6 +1255,12 @@
   function buildPhotos(photos) {
     photos.forEach(function (p) { $('photo-list').appendChild(photoRow(p)); });
   }
+
+  $('project-add').addEventListener('click', function () {
+    var row = repoRow({}, true, {}, true);
+    $('repo-list').appendChild(row);
+    row.querySelector('.p-name').focus();
+  });
 
   $('hist-add').addEventListener('click', function () { $('hist-list').appendChild(histRow(null)); });
   $('contact-add').addEventListener('click', function () { $('contact-list-edit').appendChild(contactRow(null)); });
@@ -1338,9 +1400,10 @@
   function collectState() {
     var projects = [];
     document.querySelectorAll('.repo-row').forEach(function (row) {
-      var repo = JSON.parse(row.dataset.repo);
-      projects.push({
-        name: repo.name,
+      var custom = row.classList.contains('custom-row');
+      var entry = {
+        key: row.dataset.key,
+        name: custom ? val(row, 'p-name') : JSON.parse(row.dataset.repo).name,
         checked: row.querySelector('input[type="checkbox"]').checked,
         description: row.querySelector('.p-description').value.trim(),
         linkUrl: val(row, 'link-url'),
@@ -1349,7 +1412,14 @@
         images: [].map.call(row.querySelectorAll('.project-img-list li'), function (li) {
           return li.dataset.id;
         }),
-      });
+      };
+      if (custom) {
+        entry.custom = true;
+        entry.id = row.dataset.id;
+        entry.url = val(row, 'p-url');
+        entry.language = val(row, 'p-language');
+      }
+      projects.push(entry);
     });
 
     var site = {
@@ -1402,12 +1472,20 @@
     }
 
     if (state.projects) {
-      var byName = {};
-      state.projects.forEach(function (p) { byName[p.name] = p; });
-      document.querySelectorAll('.repo-row').forEach(function (row) {
-        var repo = JSON.parse(row.dataset.repo);
-        var p = byName[repo.name];
-        if (!p) return;
+      var list = $('repo-list');
+      var byKey = {};
+      document.querySelectorAll('.repo-row').forEach(function (row) { byKey[row.dataset.key] = row; });
+      state.projects.forEach(function (p) {
+        var row = byKey[p.key];
+        if (!row) {
+          if (!p.custom) return;
+          row = repoRow(p, p.checked, p, true);
+          byKey[p.key] = row;
+        } else if (p.custom) {
+          row.querySelector('.p-name').value = p.name || '';
+          row.querySelector('.p-url').value = p.url || '';
+          row.querySelector('.p-language').value = p.language || '';
+        }
         row.querySelector('input[type="checkbox"]').checked = p.checked;
         row.querySelector('.p-description').value = p.description || '';
         row.querySelector('.link-url').value = p.linkUrl || '';
@@ -1419,6 +1497,7 @@
         imgList.textContent = '';
         (p.images || []).forEach(function (id) { imgList.appendChild(projectImgItem(id)); });
         relabelProjectImages(imgList);
+        list.appendChild(row);
       });
     }
 
@@ -1500,24 +1579,46 @@
     status.textContent = 'saving…';
 
     var projects = [];
+    var missingName = false;
     document.querySelectorAll('.repo-row').forEach(function (row) {
-      if (!row.querySelector('input[type="checkbox"]').checked) return;
-      var repo = JSON.parse(row.dataset.repo);
-      projects.push({
-        name: repo.name,
-        url: repo.url,
-        language: repo.language,
-        homepage: repo.homepage,
-        blurb: repo.blurb,
-        description: row.querySelector('.p-description').value.trim(),
-        linkUrl: val(row, 'link-url'),
-        linkText: val(row, 'link-text'),
-        details: (function (v) { return v === DETAILS_TEMPLATE.trim() ? '' : v; })(row.querySelector('.p-details').value.trim()),
-        images: [].map.call(row.querySelectorAll('.project-img-list li'), function (li) {
-          return li.dataset.id;
-        }),
+      var custom = row.classList.contains('custom-row');
+      var ticked = row.querySelector('input[type="checkbox"]').checked;
+      if (!custom && !ticked) return;
+      var p;
+      if (custom) {
+        p = {
+          custom: true,
+          id: row.dataset.id,
+          hidden: !ticked,
+          name: val(row, 'p-name'),
+          url: val(row, 'p-url'),
+          language: val(row, 'p-language'),
+        };
+        if (!p.name) missingName = true;
+      } else {
+        var repo = JSON.parse(row.dataset.repo);
+        p = {
+          name: repo.name,
+          url: repo.url,
+          language: repo.language,
+          homepage: repo.homepage,
+          blurb: repo.blurb,
+        };
+      }
+      p.description = row.querySelector('.p-description').value.trim();
+      p.linkUrl = val(row, 'link-url');
+      p.linkText = val(row, 'link-text');
+      p.details = (function (v) { return v === DETAILS_TEMPLATE.trim() ? '' : v; })(row.querySelector('.p-details').value.trim());
+      p.images = [].map.call(row.querySelectorAll('.project-img-list li'), function (li) {
+        return li.dataset.id;
       });
+      projects.push(p);
     });
+
+    if (missingName) {
+      status.textContent = 'every added project needs a name before you can save.';
+      return;
+    }
 
     var site = {
       about: $('about-input').value.trim(),
@@ -1563,7 +1664,8 @@
     Promise.all([put('/api/projects', projects), put('/api/site', site), put('/api/photos', photos), put('/api/visibility', visibility), put('/api/notfound', notFound)])
       .then(function () {
         clearDraft();
-        status.textContent = '☼ saved — ' + projects.length + ' project' + (projects.length === 1 ? '' : 's') + ' on display';
+        var shown = projects.filter(function (p) { return !p.hidden; }).length;
+        status.textContent = '☼ saved — ' + shown + ' project' + (shown === 1 ? '' : 's') + ' on display';
       })
       .catch(function (err) {
         status.textContent = 'save failed: ' + err.message;
@@ -1589,7 +1691,7 @@
     $('who').textContent = me.login;
     return Promise.all([
       fetch('/api/repos').then(function (r) { return r.json(); }),
-      fetch('/api/projects').then(function (r) { return r.json(); }),
+      fetch('/api/projects?all=1').then(function (r) { return r.json(); }),
       fetch('/api/site').then(function (r) { return r.json(); }),
       fetch('/api/photos?all=1').then(function (r) { return r.json(); }),
       fetch('/api/visibility').then(function (r) { return r.json(); }),

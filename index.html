@@ -417,8 +417,13 @@
       glyph.className = 'glyph';
       glyph.setAttribute('aria-hidden', 'true');
       glyph.textContent = '▒';
-      var name = document.createElement('a');
-      name.href = p.url;
+      var name;
+      if (p.url) {
+        name = document.createElement('a');
+        name.href = p.url;
+      } else {
+        name = document.createElement('span');
+      }
       name.textContent = p.name.toLowerCase();
       var fill = document.createElement('span');
       fill.className = 'fill';
@@ -441,34 +446,42 @@
         article.appendChild(blurb);
       }
 
-      var links = document.createElement('p');
-      links.className = 'links';
-      var arrow = document.createElement('span');
-      arrow.className = 'glyph';
-      arrow.setAttribute('aria-hidden', 'true');
-      arrow.textContent = '» ';
-      var code = document.createElement('a');
-      code.href = p.url;
-      code.textContent = 'code';
-      links.appendChild(arrow); links.appendChild(code);
+      var linkNodes = [];
+      if (p.url) {
+        var code = document.createElement('a');
+        code.href = p.url;
+        code.textContent = 'code';
+        linkNodes.push(code);
+      }
       var extraUrl = p.linkUrl || p.homepage;
       if (extraUrl) {
-        links.appendChild(document.createTextNode(' · '));
         var extra = document.createElement('a');
         extra.href = extraUrl;
         extra.textContent = (p.linkUrl && p.linkText) || 'live';
-        links.appendChild(extra);
+        linkNodes.push(extra);
       }
       if (p.details || (Array.isArray(p.images) && p.images.length)) {
-        links.appendChild(document.createTextNode(' · '));
         var more = document.createElement('button');
         more.type = 'button';
         more.className = 'link-button';
         more.textContent = 'more';
         more.addEventListener('click', function () { openProjectModal(p); });
-        links.appendChild(more);
+        linkNodes.push(more);
       }
-      article.appendChild(links);
+      if (linkNodes.length) {
+        var links = document.createElement('p');
+        links.className = 'links';
+        var arrow = document.createElement('span');
+        arrow.className = 'glyph';
+        arrow.setAttribute('aria-hidden', 'true');
+        arrow.textContent = '» ';
+        links.appendChild(arrow);
+        linkNodes.forEach(function (node, i) {
+          if (i) links.appendChild(document.createTextNode(' · '));
+          links.appendChild(node);
+        });
+        article.appendChild(links);
+      }
       section.appendChild(article);
     });
   }).catch(function () { /* offline/file preview — baked list stays */ });

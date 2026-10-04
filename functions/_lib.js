@@ -80,6 +80,10 @@ export function sniffImage(buf) {
   return null;
 }
 
-export function validImageId(id) {
+export function validShortId(id) {
   return typeof id === 'string' && /^[a-z0-9-]{1,40}$/.test(id);
+}
+
+export function validImageId(id) {
+  return validShortId(id);
 }
