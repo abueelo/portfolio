@@ -470,9 +470,27 @@
 
   var DETAILS_TEMPLATE = '## what i built\n\n\n## my role\n\n\n## tech used\n';
   var DETAILS_MAX = 20000;
+  var DESCRIPTION_MAX = 2000;
 
   function count(n) {
     return n.toLocaleString('en-GB');
+  }
+
+  function charCount(field, max) {
+    var el = document.createElement('p');
+    el.className = 'char-count';
+    function refresh() {
+      var n = field.value.trim().length;
+      var over = n - max;
+      el.hidden = n === 0;
+      el.textContent = over > 0
+        ? count(n) + ' / ' + count(max) + ' · ' + count(over) + ' over'
+        : count(n) + ' / ' + count(max);
+      el.classList.toggle('over', over > 0);
+    }
+    field.addEventListener('input', refresh);
+    refresh();
+    return el;
   }
 
   function newProjectId() {
@@ -537,6 +555,7 @@
     ta.rows = 2;
     ta.placeholder = repo.blurb || 'description shown on the portfolio…';
     ta.value = saved.description || '';
+    var taCount = charCount(ta, DESCRIPTION_MAX);
 
     var urlRow = null;
     if (custom) {
@@ -587,17 +606,7 @@
 
     var detailsInput = document.createElement('div');
     detailsInput.className = 'details-input';
-    var detailsCount = document.createElement('p');
-    detailsCount.className = 'details-count';
-
-    function refreshCount() {
-      var n = detailsTa.value.trim().length;
-      var over = n - DETAILS_MAX;
-      detailsCount.textContent = over > 0
-        ? count(n) + ' / ' + count(DETAILS_MAX) + ' · ' + count(over) + ' over'
-        : count(n) + ' / ' + count(DETAILS_MAX);
-      detailsCount.classList.toggle('over', over > 0);
-    }
+    var detailsCount = charCount(detailsTa, DETAILS_MAX);
 
     function currentImageIds() {
       return [].map.call(imgList.querySelectorAll('.proj-img-item'), function (li) { return li.dataset.id; });
@@ -645,10 +654,8 @@
 
     detailsTa.addEventListener('input', function () {
       autoGrowDetailsTa();
-      refreshCount();
       refreshPreview();
     });
-    refreshCount();
     detailsInput.appendChild(detailsTa);
     detailsInput.appendChild(detailsCount);
     detailsEditor.appendChild(detailsInput);
@@ -712,6 +719,7 @@
 
     li.appendChild(head);
     li.appendChild(ta);
+    li.appendChild(taCount);
     if (urlRow) li.appendChild(urlRow);
     li.appendChild(linkRow);
     li.appendChild(more);
@@ -1510,7 +1518,9 @@
           row.querySelector('.p-language').value = p.language || '';
         }
         row.querySelector('input[type="checkbox"]').checked = p.checked;
-        row.querySelector('.p-description').value = p.description || '';
+        var descTa = row.querySelector('.p-description');
+        descTa.value = p.description || '';
+        descTa.dispatchEvent(new Event('input', { bubbles: true }));
         row.querySelector('.link-url').value = p.linkUrl || '';
         row.querySelector('.link-text').value = p.linkText || '';
         var detailsTa = row.querySelector('.p-details');
@@ -1637,8 +1647,17 @@
       p.images = [].map.call(row.querySelectorAll('.project-img-list li'), function (li) {
         return li.dataset.id;
       });
+      if (p.description.length > DESCRIPTION_MAX) {
+        tooLong.push({
+          name: p.name, field: 'description', length: p.description.length,
+          max: DESCRIPTION_MAX, row: row,
+        });
+      }
       if (p.details.length > DETAILS_MAX) {
-        tooLong.push({ name: p.name, length: p.details.length, row: row });
+        tooLong.push({
+          name: p.name, field: 'write-up', length: p.details.length,
+          max: DETAILS_MAX, row: row, inDetails: true,
+        });
       }
       projects.push(p);
     });
@@ -1650,15 +1669,18 @@
     }
 
     if (tooLong.length) {
-      tooLong.forEach(function (t) { t.row.querySelector('.project-more').open = true; });
+      tooLong.forEach(function (t) {
+        if (t.inDetails) t.row.querySelector('.project-more').open = true;
+      });
       status.classList.add('error');
       status.textContent = tooLong.length === 1
-        ? 'the write-up for "' + tooLong[0].name + '" is ' + count(tooLong[0].length) +
-          ' characters — ' + count(tooLong[0].length - DETAILS_MAX) + ' over the ' +
-          count(DETAILS_MAX) + ' limit. nothing was saved.'
-        : 'these write-ups are over the ' + count(DETAILS_MAX) + ' character limit: ' +
+        ? 'the ' + tooLong[0].field + ' for "' + tooLong[0].name + '" is ' +
+          count(tooLong[0].length) + ' characters — ' +
+          count(tooLong[0].length - tooLong[0].max) + ' over the ' +
+          count(tooLong[0].max) + ' limit. nothing was saved.'
+        : 'these are over the character limit: ' +
           tooLong.map(function (t) {
-            return '"' + t.name + '" (' + count(t.length) + ')';
+            return '"' + t.name + '" ' + t.field + ' (' + count(t.length) + ' / ' + count(t.max) + ')';
           }).join(', ') + '. nothing was saved.';
       tooLong[0].row.scrollIntoView({ block: 'center' });
       return;

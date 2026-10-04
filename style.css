@@ -661,14 +661,14 @@ section h2 .bracket {
   resize: none;
 }
 
-.details-count {
-  align-self: flex-end;
+.char-count {
   margin-top: 0.3rem;
   color: var(--dim);
   font-size: 0.8rem;
+  text-align: right;
 }
 
-.details-count.over {
+.char-count.over {
   color: var(--amber);
 }
 
