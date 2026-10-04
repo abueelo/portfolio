@@ -196,6 +196,10 @@ section h2 .bracket {
   color: var(--amber);
 }
 
+.project h3 .project-name {
+  color: var(--amber);
+}
+
 .project h3 .fill {
   flex: 1;
   min-width: 3ch;
@@ -767,9 +771,8 @@ section h2 .bracket {
 }
 
 .custom-row .p-language {
-  flex: 0 0 14ch;
+  flex: 1 1 14ch;
   min-width: 0;
-  margin-left: auto;
   font-size: 0.85rem;
 }
 
