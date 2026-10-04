@@ -469,6 +469,11 @@
   }
 
   var DETAILS_TEMPLATE = '## what i built\n\n\n## my role\n\n\n## tech used\n';
+  var DETAILS_MAX = 20000;
+
+  function count(n) {
+    return n.toLocaleString('en-GB');
+  }
 
   function newProjectId() {
     var bytes = crypto.getRandomValues(new Uint8Array(4));
@@ -580,6 +585,20 @@
     var detailsPreview = document.createElement('div');
     detailsPreview.className = 'p-details-preview modal-details-text';
 
+    var detailsInput = document.createElement('div');
+    detailsInput.className = 'details-input';
+    var detailsCount = document.createElement('p');
+    detailsCount.className = 'details-count';
+
+    function refreshCount() {
+      var n = detailsTa.value.trim().length;
+      var over = n - DETAILS_MAX;
+      detailsCount.textContent = over > 0
+        ? count(n) + ' / ' + count(DETAILS_MAX) + ' · ' + count(over) + ' over'
+        : count(n) + ' / ' + count(DETAILS_MAX);
+      detailsCount.classList.toggle('over', over > 0);
+    }
+
     function currentImageIds() {
       return [].map.call(imgList.querySelectorAll('.proj-img-item'), function (li) { return li.dataset.id; });
     }
@@ -626,9 +645,13 @@
 
     detailsTa.addEventListener('input', function () {
       autoGrowDetailsTa();
+      refreshCount();
       refreshPreview();
     });
-    detailsEditor.appendChild(detailsTa);
+    refreshCount();
+    detailsInput.appendChild(detailsTa);
+    detailsInput.appendChild(detailsCount);
+    detailsEditor.appendChild(detailsInput);
     detailsEditor.appendChild(detailsPreview);
     more.appendChild(detailsEditor);
     more.addEventListener('toggle', autoGrowDetailsTa);
@@ -1576,10 +1599,12 @@
 
   $('save').addEventListener('click', function () {
     var status = $('status');
+    status.classList.remove('error');
     status.textContent = 'saving…';
 
     var projects = [];
     var missingName = false;
+    var tooLong = [];
     document.querySelectorAll('.repo-row').forEach(function (row) {
       var custom = row.classList.contains('custom-row');
       var ticked = row.querySelector('input[type="checkbox"]').checked;
@@ -1612,11 +1637,30 @@
       p.images = [].map.call(row.querySelectorAll('.project-img-list li'), function (li) {
         return li.dataset.id;
       });
+      if (p.details.length > DETAILS_MAX) {
+        tooLong.push({ name: p.name, length: p.details.length, row: row });
+      }
       projects.push(p);
     });
 
     if (missingName) {
+      status.classList.add('error');
       status.textContent = 'every added project needs a name before you can save.';
+      return;
+    }
+
+    if (tooLong.length) {
+      tooLong.forEach(function (t) { t.row.querySelector('.project-more').open = true; });
+      status.classList.add('error');
+      status.textContent = tooLong.length === 1
+        ? 'the write-up for "' + tooLong[0].name + '" is ' + count(tooLong[0].length) +
+          ' characters — ' + count(tooLong[0].length - DETAILS_MAX) + ' over the ' +
+          count(DETAILS_MAX) + ' limit. nothing was saved.'
+        : 'these write-ups are over the ' + count(DETAILS_MAX) + ' character limit: ' +
+          tooLong.map(function (t) {
+            return '"' + t.name + '" (' + count(t.length) + ')';
+          }).join(', ') + '. nothing was saved.';
+      tooLong[0].row.scrollIntoView({ block: 'center' });
       return;
     }
 
