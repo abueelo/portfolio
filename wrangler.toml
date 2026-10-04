@@ -1,3 +1,11 @@
 name = "portfolio"
 compatibility_date = "2026-07-01"
 pages_build_output_dir = "."
+
+[[kv_namespaces]]
+binding = "PORTFOLIO_KV"
+id = "80a35473fc974a188b13d5b697d2f076"
+
+[[r2_buckets]]
+binding = "PHOTOS"
+bucket_name = "portfolio-photos"
