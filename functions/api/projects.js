@@ -5,7 +5,7 @@ const MAX_PROJECTS = 30;
 const MAX_IMAGES = 10;
 const MAX_LEN = {
   name: 100, url: 300, language: 60, homepage: 300, description: 2000,
-  blurb: 2000, linkUrl: 300, linkText: 40, details: 4000,
+  blurb: 2000, linkUrl: 300, linkText: 40, details: 20000,
 };
 
 export async function onRequestGet({ request, env }) {
