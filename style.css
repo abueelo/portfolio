@@ -762,13 +762,14 @@ section h2 .bracket {
 }
 
 .custom-row .p-name {
-  flex: 1;
+  flex: 0 1 calc((100% - 1ch) * 2 / 3);
   min-width: 0;
 }
 
 .custom-row .p-language {
   flex: 0 0 14ch;
   min-width: 0;
+  margin-left: auto;
   font-size: 0.85rem;
 }
 
@@ -831,7 +832,7 @@ section h2 .bracket {
   margin-top: 0.4rem;
 }
 
-.link-row .link-url { flex: 2; }
+.link-row .link-url { flex: 0 1 calc((100% - 1ch) * 2 / 3); }
 .link-row .link-text { flex: 1; }
 .link-row .p-url { flex: 1; }
 
