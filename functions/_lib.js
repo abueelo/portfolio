@@ -4,7 +4,7 @@ const SESSION_DAYS = 7;
 
 const enc = new TextEncoder();
 
-async function hmac(secret, message) {
+export async function hmac(secret, message) {
   const key = await crypto.subtle.importKey(
     'raw', enc.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
   );

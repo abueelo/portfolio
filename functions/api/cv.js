@@ -1,4 +1,5 @@
 import { requireOwner, json } from '../_lib.js';
+import { recordChange } from '../_audit.js';
 
 const DATA_KEY = 'cv-file';
 const META_KEY = 'cv-meta';
@@ -26,8 +27,9 @@ export async function onRequestGet({ request, env }) {
   });
 }
 
-export async function onRequestPut({ request, env }) {
-  if (!(await requireOwner(request, env))) {
+export async function onRequestPut({ request, env, waitUntil }) {
+  const who = await requireOwner(request, env);
+  if (!who) {
     return json({ error: 'not authorised' }, { status: 401 });
   }
 
@@ -50,14 +52,24 @@ export async function onRequestPut({ request, env }) {
     size: buf.byteLength,
     uploaded: Date.now(),
   }));
+  recordChange(env, waitUntil, {
+    who, resource: 'cv', action: 'upload',
+    summary: 'uploaded ' + name + ' (' + Math.round(buf.byteLength / 1024) + ' kb)',
+    detail: { name, size: buf.byteLength },
+  });
+
   return json({ ok: true, name, size: buf.byteLength });
 }
 
-export async function onRequestDelete({ request, env }) {
-  if (!(await requireOwner(request, env))) {
+export async function onRequestDelete({ request, env, waitUntil }) {
+  const who = await requireOwner(request, env);
+  if (!who) {
     return json({ error: 'not authorised' }, { status: 401 });
   }
   await env.PORTFOLIO_KV.delete(DATA_KEY);
   await env.PORTFOLIO_KV.delete(META_KEY);
+
+  recordChange(env, waitUntil, { who, resource: 'cv', action: 'delete', summary: 'removed the cv' });
+
   return json({ ok: true });
 }

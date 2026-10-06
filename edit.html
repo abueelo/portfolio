@@ -35,6 +35,26 @@
 
   <div id="editor" hidden>
 
+    <nav class="tabs" role="tablist" aria-label="edit sections">
+      <button type="button" role="tab" class="tab" data-tab="about" aria-selected="true">
+        <span class="bracket" aria-hidden="true">[ </span>about<span class="bracket" aria-hidden="true"> ]</span>
+      </button>
+      <button type="button" role="tab" class="tab" data-tab="projects" aria-selected="false">
+        <span class="bracket" aria-hidden="true">[ </span>projects<span class="bracket" aria-hidden="true"> ]</span>
+      </button>
+      <button type="button" role="tab" class="tab" data-tab="history" aria-selected="false">
+        <span class="bracket" aria-hidden="true">[ </span>history<span class="bracket" aria-hidden="true"> ]</span>
+      </button>
+      <button type="button" role="tab" class="tab" data-tab="photos" aria-selected="false">
+        <span class="bracket" aria-hidden="true">[ </span>photos<span class="bracket" aria-hidden="true"> ]</span>
+      </button>
+      <button type="button" role="tab" class="tab" data-tab="site" aria-selected="false">
+        <span class="bracket" aria-hidden="true">[ </span>site<span class="bracket" aria-hidden="true"> ]</span>
+      </button>
+    </nav>
+
+    <div class="tab-panel" role="tabpanel" data-tab="about">
+
     <section>
       <h2><span class="bracket" aria-hidden="true">[ </span>about<span class="bracket" aria-hidden="true"> ]</span></h2>
       <p class="hint">the line under your name — leave empty to keep the default:</p>
@@ -65,6 +85,10 @@
       </p>
     </section>
 
+    </div>
+
+    <div class="tab-panel" role="tabpanel" data-tab="projects" hidden>
+
     <section>
       <h2><span class="bracket" aria-hidden="true">[ </span>projects<span class="bracket" aria-hidden="true"> ]</span></h2>
       <p class="hint">tick a repo to show it on the portfolio · ▲▼ set the order ·
@@ -75,6 +99,10 @@
       <p><button type="button" class="add" id="project-add">[ + add project ]</button></p>
     </section>
 
+    </div>
+
+    <div class="tab-panel" role="tabpanel" data-tab="history" hidden>
+
     <section>
       <h2><span class="bracket" aria-hidden="true">[ </span>history<span class="bracket" aria-hidden="true"> ]</span></h2>
       <p class="hint">education, employment and such. the portfolio only shows this box
@@ -82,6 +110,10 @@
       <ul id="hist-list" class="edit-rows"></ul>
       <p><button type="button" class="add" id="hist-add">[ + add entry ]</button></p>
     </section>
+
+    </div>
+
+    <div class="tab-panel" role="tabpanel" data-tab="photos" hidden>
 
     <section>
       <h2><span class="bracket" aria-hidden="true">[ </span>photography<span class="bracket" aria-hidden="true"> ]</span></h2>
@@ -96,6 +128,10 @@
         <span id="photo-status" class="hint" role="status"></span>
       </p>
     </section>
+
+    </div>
+
+    <div class="tab-panel" role="tabpanel" data-tab="site" hidden>
 
     <section>
       <h2><span class="bracket" aria-hidden="true">[ </span>visibility<span class="bracket" aria-hidden="true"> ]</span></h2>
@@ -142,6 +178,8 @@
       </label>
     </section>
 
+    </div>
+
     <p class="hint" id="draft-banner" hidden>
       you have unsaved local changes from <span id="draft-time"></span> —
       <button type="button" class="link-button" id="draft-restore">[ restore ]</button>
@@ -152,6 +190,7 @@
       <span id="status" role="status"></span>
     </p>
     <p class="session-line">logged in as <span id="who"></span>
+      · <a href="/logs">logs</a>
       · <a href="/api/logout">logout</a>
       · <a href="/">back to the surface</a></p>
 
@@ -221,6 +260,58 @@
     ['login-box', 'denied-box', 'editor', 'loading-box'].forEach(function (b) {
       $(b).hidden = b !== id;
     });
+  }
+
+  var TAB_KEY = 'edit-tab';
+  var tabs = [].slice.call(document.querySelectorAll('.tab'));
+  var panels = [].slice.call(document.querySelectorAll('.tab-panel'));
+
+  function showTab(name) {
+    var known = panels.some(function (p) { return p.dataset.tab === name; });
+    if (!known) name = 'about';
+    tabs.forEach(function (t) { t.setAttribute('aria-selected', String(t.dataset.tab === name)); });
+    panels.forEach(function (p) { p.hidden = p.dataset.tab !== name; });
+    try { localStorage.setItem(TAB_KEY, name); } catch (err) {}
+    if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
+  }
+
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { showTab(t.dataset.tab); });
+    t.addEventListener('keydown', function (e) {
+      var to = null;
+      if (e.key === 'ArrowRight') to = tabs[(i + 1) % tabs.length];
+      if (e.key === 'ArrowLeft') to = tabs[(i - 1 + tabs.length) % tabs.length];
+      if (e.key === 'Home') to = tabs[0];
+      if (e.key === 'End') to = tabs[tabs.length - 1];
+      if (!to) return;
+      e.preventDefault();
+      to.focus();
+      showTab(to.dataset.tab);
+    });
+  });
+
+  window.addEventListener('hashchange', function () {
+    if (!$('editor').hidden) showTab(location.hash.slice(1));
+  });
+
+  function markDirty(target) {
+    var panel = target && target.closest ? target.closest('.tab-panel') : null;
+    if (!panel) return;
+    tabs.forEach(function (t) {
+      if (t.dataset.tab === panel.dataset.tab) t.classList.add('dirty');
+    });
+  }
+
+  function clearDirty() {
+    tabs.forEach(function (t) { t.classList.remove('dirty'); });
+  }
+
+  function initTabs() {
+    var want = location.hash.slice(1);
+    if (!want) {
+      try { want = localStorage.getItem(TAB_KEY) || 'about'; } catch (err) { want = 'about'; }
+    }
+    showTab(want);
   }
 
   function input(cls, placeholder, value, type) {
@@ -1602,10 +1693,13 @@
   }
 
   var draftTimer = null;
-  document.getElementById('editor').addEventListener('input', function () {
+  function onEdit(e) {
+    markDirty(e.target);
     clearTimeout(draftTimer);
     draftTimer = setTimeout(saveDraft, 400);
-  });
+  }
+  document.getElementById('editor').addEventListener('input', onEdit);
+  document.getElementById('editor').addEventListener('change', onEdit);
 
   $('save').addEventListener('click', function () {
     var status = $('status');
@@ -1730,6 +1824,7 @@
     Promise.all([put('/api/projects', projects), put('/api/site', site), put('/api/photos', photos), put('/api/visibility', visibility), put('/api/notfound', notFound)])
       .then(function () {
         clearDraft();
+        clearDirty();
         var shown = projects.filter(function (p) { return !p.hidden; }).length;
         status.textContent = '☼ saved — ' + shown + ' project' + (shown === 1 ? '' : 's') + ' on display';
       })
@@ -1769,6 +1864,7 @@
       applyNotFound(results[5] || {});
       loadCvInfo();
       show('editor');
+      initTabs();
       checkForDraft();
     });
   }).catch(function () {

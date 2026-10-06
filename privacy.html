@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thom Russell — privacy</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='8' y='13' font-family='Menlo, Consolas, monospace' font-size='13' text-anchor='middle' fill='%23c9a25e'>§</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
+  </script>
+</head>
+<body>
+
+<header>
+  <div class="head-row">
+  <p class="tagline">privacy<span class="cursor" aria-hidden="true">█</span></p>
+
+  <nav aria-label="sections">
+    <a href="/"><span class="key" aria-hidden="true">[h]</span> home</a>
+    <button id="theme-toggle" type="button" aria-label="toggle light/dark theme">
+      <span class="key" aria-hidden="true">[t]</span> <span class="mode">light</span>
+    </button>
+  </nav>
+  </div>
+</header>
+
+<main>
+  <section>
+    <h2><span class="bracket" aria-hidden="true">[ </span>the short version<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p>This site keeps basic statistics about how it gets used. There are no cookies, nothing
+      is stored in your browser, your IP address is never written down, and none of it goes
+      to anyone else.</p>
+  </section>
+
+  <section>
+    <h2><span class="bracket" aria-hidden="true">[ </span>what is recorded<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <ul class="contact-list">
+      <li><span class="label">where</span> the country, region and city your request came through,
+        and the network it came from</li>
+      <li><span class="label">what</span> which page you opened, which sections you scrolled
+        through and roughly how long each was on screen</li>
+      <li><span class="label">clicks</span> project write-ups you opened, links you followed off
+        the site, whether you downloaded the CV</li>
+      <li><span class="label">browser</span> the browser string your browser sends, your window
+        size, and a rough guess at whether the visit came from a person or a crawler</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2><span class="bracket" aria-hidden="true">[ </span>what is not<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p>No cookies and nothing in local storage — the id that groups one visit together is a
+      random number held in memory, and it's gone the moment you close the tab.</p>
+    <p>Your IP address is never stored. It goes through a one-way hash with a salt that
+      changes every day, which is only there to tell two visits apart on the same day.</p>
+    <p>No third-party analytics, no advertising, no tracking across other sites, and nothing
+      is shared or sold.</p>
+  </section>
+
+  <section>
+    <h2><span class="bracket" aria-hidden="true">[ </span>how long<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p>Visit records are deleted automatically after 90 days.</p>
+  </section>
+
+  <section>
+    <h2><span class="bracket" aria-hidden="true">[ </span>opting out<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p>If your browser sends Do Not Track or Global Privacy Control, nothing about your visit
+      is recorded at all. Blocking JavaScript has much the same effect.</p>
+    <p>If you'd like anything removed, email me — the address is on the
+      <a href="/">home page</a>.</p>
+  </section>
+</main>
+
+<footer>
+  <p><span aria-hidden="true">☼ </span><a class="edit-link" href="/edit"><span class="swap">abueelo</span></a> · <span id="year">1970</span><span aria-hidden="true"> ☼</span></p>
+</footer>
+
+<script>
+  document.getElementById('year').textContent = new Date().getFullYear();
+
+  var root = document.documentElement;
+  var toggle = document.getElementById('theme-toggle');
+  function setTheme(theme) {
+    root.dataset.theme = theme;
+    localStorage.setItem('theme', theme);
+    toggle.querySelector('.mode').textContent = theme === 'light' ? 'dark' : 'light';
+  }
+  setTheme(root.dataset.theme);
+  toggle.addEventListener('click', function () {
+    setTheme(root.dataset.theme === 'light' ? 'dark' : 'light');
+  });
+
+  document.addEventListener('keydown', function (e) {
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (e.key === 't') { toggle.click(); return; }
+    if (e.key === 'h') window.location.href = '/';
+  });
+</script>
+
+</body>
+</html>

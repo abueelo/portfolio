@@ -28,6 +28,7 @@ Disallow: /
 User-agent: *
 Allow: /
 Disallow: /edit
+Disallow: /logs
 Disallow: /api/
 
 Sitemap: https://russl.dev/sitemap.xml

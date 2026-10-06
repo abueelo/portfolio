@@ -20,10 +20,10 @@ cp .dev.vars.example .dev.vars
 Fill in `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` (dev app) and `SESSION_SECRET` (`openssl rand -hex 32`), then:
 
 ```sh
-npx wrangler pages dev . --kv PORTFOLIO_KV --r2 PHOTOS
+npx wrangler pages dev . --kv PORTFOLIO_KV --r2 PHOTOS --d1 LOGS
 ```
 
-Site's at http://localhost:8788, console at `/edit`. Local KV data lives under `.wrangler/` (gitignored).
+Site's at http://localhost:8788, console at `/edit`, logs at `/logs`. Local KV and D1 data live under `.wrangler/` (gitignored).
 
 ## 3. Deploy
 
@@ -32,9 +32,12 @@ Deploys go through GitHub Actions (`.github/workflows/deploy.yml`) on push to `m
 1. `npx wrangler login`, then `npx wrangler pages project create portfolio --production-branch=main`
 2. KV: create a namespace called `portfolio`, bind it as `PORTFOLIO_KV` in the Pages project's settings.
 3. R2: create a bucket called `portfolio-photos`, bind it as `PHOTOS`.
-4. Add Pages env vars (Production, marked secret): `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` (prod app), `SESSION_SECRET`, and optionally `GITHUB_API_TOKEN` (no scopes needed, just raises the GitHub API rate limit for `/api/repos` from 60/hr to 5000/hr).
-5. Grab a Cloudflare API token (Edit Cloudflare Workers template, or a custom one scoped to Pages) and your account id (right sidebar of the dashboard).
-6. Add both as repo secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
-7. Add custom domains `russl.dev` and `photography.russl.dev` to the Pages project — middleware serves the gallery at that subdomain's root.
-8. Leave Bot Fight Mode / Under Attack Mode off, they trigger a browser-check page.
-9. Push to `main`, or just re-run the workflow.
+4. D1: `npx wrangler d1 create portfolio-logs`, put the id it prints into `wrangler.toml`, and bind it
+   as `LOGS` in the Pages project's settings. The tables create themselves on the first request —
+   the layout is in `functions/_schema.js`.
+5. Add Pages env vars (Production, marked secret): `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET` (prod app), `SESSION_SECRET`, and optionally `GITHUB_API_TOKEN` (no scopes needed, just raises the GitHub API rate limit for `/api/repos` from 60/hr to 5000/hr).
+6. Grab a Cloudflare API token (Edit Cloudflare Workers template, or a custom one scoped to Pages) and your account id (right sidebar of the dashboard).
+7. Add both as repo secrets: `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`.
+8. Add custom domains `russl.dev` and `photography.russl.dev` to the Pages project — middleware serves the gallery at that subdomain's root.
+9. Leave Bot Fight Mode / Under Attack Mode off, they trigger a browser-check page.
+10. Push to `main`, or just re-run the workflow.
