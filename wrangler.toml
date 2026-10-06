@@ -13,4 +13,4 @@ bucket_name = "portfolio-photos"
 [[d1_databases]]
 binding = "LOGS"
 database_name = "portfolio-logs"
-database_id = ""
+database_id = "b32835c6-a3fe-405b-b79d-834aee82275b"
