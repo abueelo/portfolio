@@ -72,10 +72,12 @@ export function serverBotSignals(request) {
   }
 
   const bm = cf.botManagement;
-  if (bm && typeof bm.score === 'number') {
+  if (bm) {
     if (bm.verifiedBot) { points += 60; reasons.push('verified bot'); }
-    else if (bm.score <= 30) { points += 40; reasons.push('low cloudflare bot score'); }
-    else if (bm.score >= 80) { points -= 20; reasons.push('high cloudflare bot score'); }
+    else if (typeof bm.score === 'number' && bm.score <= 30) {
+      points += 40;
+      reasons.push('low cloudflare bot score');
+    }
   }
 
   return { points, reasons };
