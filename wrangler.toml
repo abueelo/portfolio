@@ -9,3 +9,8 @@ id = "80a35473fc974a188b13d5b697d2f076"
 [[r2_buckets]]
 binding = "PHOTOS"
 bucket_name = "portfolio-photos"
+
+[[d1_databases]]
+binding = "LOGS"
+database_name = "portfolio-logs"
+database_id = "b32835c6-a3fe-405b-b79d-834aee82275b"

@@ -1,4 +1,5 @@
 import { requireOwner, json } from '../_lib.js';
+import { recordChange, summarise } from '../_audit.js';
 
 const KEY = 'notfound';
 const MAX = { title: 60, message: 300, buttonLabel: 60 };
@@ -20,8 +21,9 @@ export async function onRequestGet({ env }) {
   return json(sanitize(notFound || {}));
 }
 
-export async function onRequestPut({ request, env }) {
-  if (!(await requireOwner(request, env))) {
+export async function onRequestPut({ request, env, waitUntil }) {
+  const who = await requireOwner(request, env);
+  if (!who) {
     return json({ error: 'not authorised' }, { status: 401 });
   }
 
@@ -33,6 +35,11 @@ export async function onRequestPut({ request, env }) {
   }
 
   const notFound = sanitize(body);
+  const old = await env.PORTFOLIO_KV.get(KEY, 'json');
   await env.PORTFOLIO_KV.put(KEY, JSON.stringify(notFound));
+
+  const change = summarise('notfound', old && sanitize(old), notFound);
+  recordChange(env, waitUntil, { who, resource: 'notfound', action: 'update', ...change });
+
   return json({ ok: true });
 }

@@ -1,9 +1,11 @@
 import { requireOwner, json, newImageId, sniffImage } from '../_lib.js';
+import { recordChange } from '../_audit.js';
 
 const MAX_BYTES = 15 * 1024 * 1024;
 
-export async function onRequestPost({ request, env }) {
-  if (!(await requireOwner(request, env))) {
+export async function onRequestPost({ request, env, waitUntil }) {
+  const who = await requireOwner(request, env);
+  if (!who) {
     return json({ error: 'not authorised' }, { status: 401 });
   }
 
@@ -18,5 +20,12 @@ export async function onRequestPost({ request, env }) {
 
   const id = newImageId();
   await env.PHOTOS.put('photo-' + id, buf, { httpMetadata: { contentType: type } });
+
+  recordChange(env, waitUntil, {
+    who, resource: 'project-images', action: 'upload',
+    summary: 'uploaded a project image (' + Math.round(buf.byteLength / 1024) + ' kb)',
+    detail: { id, type, size: buf.byteLength },
+  });
+
   return json({ id, type, size: buf.byteLength });
 }

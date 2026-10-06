@@ -1,4 +1,5 @@
 import { requireOwner, json } from '../_lib.js';
+import { recordChange, summarise } from '../_audit.js';
 
 const KEY = 'site';
 const MAX = { about: 3000, tagline: 120, label: 30, text: 100, url: 300, start: 30, end: 30, what: 200 };
@@ -9,8 +10,9 @@ export async function onRequestGet({ env }) {
   return json(site || {});
 }
 
-export async function onRequestPut({ request, env }) {
-  if (!(await requireOwner(request, env))) {
+export async function onRequestPut({ request, env, waitUntil }) {
+  const who = await requireOwner(request, env);
+  if (!who) {
     return json({ error: 'not authorised' }, { status: 401 });
   }
 
@@ -49,6 +51,11 @@ export async function onRequestPut({ request, env }) {
   }
 
   const site = { about, photoAbout, tagline, contacts, history };
+  const old = await env.PORTFOLIO_KV.get(KEY, 'json');
   await env.PORTFOLIO_KV.put(KEY, JSON.stringify(site));
+
+  const change = summarise('site', old, site);
+  recordChange(env, waitUntil, { who, resource: 'site', action: 'update', ...change });
+
   return json({ ok: true });
 }

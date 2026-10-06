@@ -1,4 +1,5 @@
 import { requireOwner, json, validImageId, validShortId } from '../_lib.js';
+import { recordChange, summarise } from '../_audit.js';
 
 const KEY = 'projects';
 const MAX_PROJECTS = 30;
@@ -17,8 +18,9 @@ export async function onRequestGet({ request, env }) {
   return json(projects.filter(p => !p.hidden));
 }
 
-export async function onRequestPut({ request, env }) {
-  if (!(await requireOwner(request, env))) {
+export async function onRequestPut({ request, env, waitUntil }) {
+  const who = await requireOwner(request, env);
+  if (!who) {
     return json({ error: 'not authorised' }, { status: 401 });
   }
 
@@ -98,5 +100,9 @@ export async function onRequestPut({ request, env }) {
   }
 
   await env.PORTFOLIO_KV.put(KEY, JSON.stringify(clean));
+
+  const change = summarise('projects', old, clean);
+  recordChange(env, waitUntil, { who, resource: 'projects', action: 'update', ...change });
+
   return json({ ok: true, count: clean.length });
 }

@@ -1,4 +1,5 @@
 import { requireOwner, json } from '../_lib.js';
+import { recordChange, summarise } from '../_audit.js';
 
 const KEY = 'visibility';
 const MAX_MSG = 300;
@@ -22,8 +23,9 @@ export async function onRequestGet({ env }) {
   return json(sanitize(visibility || {}));
 }
 
-export async function onRequestPut({ request, env }) {
-  if (!(await requireOwner(request, env))) {
+export async function onRequestPut({ request, env, waitUntil }) {
+  const who = await requireOwner(request, env);
+  if (!who) {
     return json({ error: 'not authorised' }, { status: 401 });
   }
 
@@ -35,6 +37,11 @@ export async function onRequestPut({ request, env }) {
   }
 
   const visibility = sanitize(body);
+  const old = await env.PORTFOLIO_KV.get(KEY, 'json');
   await env.PORTFOLIO_KV.put(KEY, JSON.stringify(visibility));
+
+  const change = summarise('visibility', old && sanitize(old), visibility);
+  recordChange(env, waitUntil, { who, resource: 'visibility', action: 'update', ...change });
+
   return json({ ok: true });
 }

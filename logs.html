@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thom Russell</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><text x='8' y='13' font-family='Menlo, Consolas, monospace' font-size='13' text-anchor='middle' fill='%23c9a25e'>§</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <script>
+    document.documentElement.dataset.theme = localStorage.getItem('theme') || 'dark';
+  </script>
+</head>
+<body>
+
+<header>
+  <p class="tagline"><span aria-hidden="true">☼ </span>logs<span aria-hidden="true"> ☼</span></p>
+</header>
+
+<main>
+
+  <section id="login-box" hidden>
+    <h2><span class="bracket" aria-hidden="true">[ </span>identify yourself<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p>nothing to see here without a key.</p>
+    <p class="links"><span class="glyph" aria-hidden="true">»</span> <a href="/api/login">login with github</a></p>
+    <p class="links"><span class="glyph" aria-hidden="true">»</span> <a href="/">back to the surface</a></p>
+  </section>
+
+  <section id="denied-box" hidden>
+    <h2><span class="bracket" aria-hidden="true">[ </span>access denied<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p>you are logged in, but this fortress belongs to someone else.</p>
+    <p class="links"><span class="glyph" aria-hidden="true">»</span> <a href="/">back to the surface</a></p>
+  </section>
+
+  <div id="viewer" hidden>
+
+    <div class="range-row">
+      <span class="hint">showing</span>
+      <button type="button" class="range" data-range="24h">[ 24h ]</button>
+      <button type="button" class="range" data-range="7d">[ 7 days ]</button>
+      <button type="button" class="range" data-range="30d">[ 30 days ]</button>
+      <button type="button" class="range" data-range="90d">[ 90 days ]</button>
+    </div>
+
+    <nav class="tabs" role="tablist" aria-label="log sections">
+      <button type="button" role="tab" class="tab" data-tab="overview" aria-selected="true">
+        <span class="bracket" aria-hidden="true">[ </span>overview<span class="bracket" aria-hidden="true"> ]</span>
+      </button>
+      <button type="button" role="tab" class="tab" data-tab="geo" aria-selected="false">
+        <span class="bracket" aria-hidden="true">[ </span>where from<span class="bracket" aria-hidden="true"> ]</span>
+      </button>
+      <button type="button" role="tab" class="tab" data-tab="areas" aria-selected="false">
+        <span class="bracket" aria-hidden="true">[ </span>what they saw<span class="bracket" aria-hidden="true"> ]</span>
+      </button>
+      <button type="button" role="tab" class="tab" data-tab="sessions" aria-selected="false">
+        <span class="bracket" aria-hidden="true">[ </span>sessions<span class="bracket" aria-hidden="true"> ]</span>
+      </button>
+      <button type="button" role="tab" class="tab" data-tab="bots" aria-selected="false">
+        <span class="bracket" aria-hidden="true">[ </span>bots<span class="bracket" aria-hidden="true"> ]</span>
+      </button>
+      <button type="button" role="tab" class="tab" data-tab="changes" aria-selected="false">
+        <span class="bracket" aria-hidden="true">[ </span>changes<span class="bracket" aria-hidden="true"> ]</span>
+      </button>
+    </nav>
+
+    <div class="tab-panel" role="tabpanel" data-tab="overview"><div class="panel-body" id="p-overview"></div></div>
+    <div class="tab-panel" role="tabpanel" data-tab="geo" hidden><div class="panel-body" id="p-geo"></div></div>
+    <div class="tab-panel" role="tabpanel" data-tab="areas" hidden><div class="panel-body" id="p-areas"></div></div>
+    <div class="tab-panel" role="tabpanel" data-tab="sessions" hidden><div class="panel-body" id="p-sessions"></div></div>
+    <div class="tab-panel" role="tabpanel" data-tab="bots" hidden><div class="panel-body" id="p-bots"></div></div>
+    <div class="tab-panel" role="tabpanel" data-tab="changes" hidden><div class="panel-body" id="p-changes"></div></div>
+
+    <p class="session-line">logged in as <span id="who"></span>
+      · <a href="/edit">edit page</a>
+      · <a href="/">back to the surface</a></p>
+
+  </div>
+
+  <section id="loading-box">
+    <h2><span class="bracket" aria-hidden="true">[ </span>logs<span class="bracket" aria-hidden="true"> ]</span></h2>
+    <p class="hint">checking who you are…</p>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  var $ = function (id) { return document.getElementById(id); };
+
+  function show(id) {
+    ['login-box', 'denied-box', 'viewer', 'loading-box'].forEach(function (b) {
+      $(b).hidden = b !== id;
+    });
+  }
+
+  function fmtMs(ms) {
+    ms = Number(ms) || 0;
+    if (ms < 1000) return ms + 'ms';
+    var s = Math.round(ms / 1000);
+    if (s < 60) return s + 's';
+    var m = Math.floor(s / 60);
+    if (m < 60) return m + 'm ' + (s % 60) + 's';
+    return Math.floor(m / 60) + 'h ' + (m % 60) + 'm';
+  }
+
+  function fmtWhen(ts) {
+    var d = new Date(Number(ts) || 0);
+    return d.toLocaleString(undefined, {
+      day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit',
+    }).toLowerCase();
+  }
+
+  function bar(value, max, width) {
+    width = width || 16;
+    var filled = max > 0 ? Math.round((value / max) * width) : 0;
+    return new Array(filled + 1).join('█') + new Array(width - filled + 1).join('░');
+  }
+
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  }
+
+  function box(title) {
+    var s = el('section');
+    var h = el('h2');
+    var open = el('span', 'bracket'); open.textContent = '[ '; open.setAttribute('aria-hidden', 'true');
+    var close = el('span', 'bracket'); close.textContent = ' ]'; close.setAttribute('aria-hidden', 'true');
+    h.appendChild(open);
+    h.appendChild(document.createTextNode(title));
+    h.appendChild(close);
+    s.appendChild(h);
+    return s;
+  }
+
+  function stats(pairs) {
+    var ul = el('ul', 'stat-list');
+    pairs.forEach(function (p) {
+      var li = el('li');
+      li.appendChild(el('span', 'label', p[0]));
+      li.appendChild(el('span', 'stat-value', p[1]));
+      if (p[2]) li.appendChild(el('span', 'hint', p[2]));
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+
+  function barList(rows, empty) {
+    if (!rows.length) return el('p', 'hint', empty || 'nothing yet.');
+    var max = rows.reduce(function (m, r) { return Math.max(m, r[1]); }, 0);
+    var ul = el('ul', 'bar-list');
+    rows.forEach(function (r) {
+      var li = el('li');
+      li.appendChild(el('span', 'bar-label', r[0] || 'unknown'));
+      li.appendChild(el('span', 'bar-track', bar(r[1], max)));
+      li.appendChild(el('span', 'bar-value', r[2] !== undefined ? r[2] : r[1]));
+      ul.appendChild(li);
+    });
+    return ul;
+  }
+
+  function table(head, rows, empty) {
+    if (!rows.length) return el('p', 'hint', empty || 'nothing yet.');
+    var wrap = el('div', 'table-scroll');
+    var t = el('table', 'log-table');
+    var thead = el('thead');
+    var tr = el('tr');
+    head.forEach(function (h) { tr.appendChild(el('th', null, h)); });
+    thead.appendChild(tr);
+    t.appendChild(thead);
+    var tbody = el('tbody');
+    rows.forEach(function (r) {
+      var row = el('tr');
+      if (r.__click) {
+        row.className = 'clickable';
+        row.tabIndex = 0;
+        row.addEventListener('click', function () { r.__click(row); });
+        row.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); r.__click(row); }
+        });
+      }
+      (r.cells || r).forEach(function (c) {
+        var td = el('td');
+        if (c && c.nodeType) td.appendChild(c);
+        else td.textContent = c === null || c === undefined || c === '' ? '—' : String(c);
+        row.appendChild(td);
+      });
+      tbody.appendChild(row);
+    });
+    t.appendChild(tbody);
+    wrap.appendChild(t);
+    return wrap;
+  }
+
+  function verdictTag(verdict, score) {
+    var span = el('span', 'verdict v-' + String(verdict || '').replace(/\s+/g, '-'));
+    span.textContent = (verdict || 'unrated') + ' (' + (score || 0) + ')';
+    return span;
+  }
+
+  var range = '7d';
+  var current = 'overview';
+  var loaded = {};
+  var pages = { sessions: 0, changes: 0 };
+
+  function get(view, extra) {
+    var q = '/api/logs?view=' + view + '&range=' + range;
+    if (extra) q += extra;
+    return fetch(q).then(function (r) {
+      if (!r.ok) throw new Error('http ' + r.status);
+      return r.json();
+    });
+  }
+
+  function render(panel, nodes) {
+    panel.textContent = '';
+    nodes.forEach(function (n) { if (n) panel.appendChild(n); });
+  }
+
+  function fail(panel, err) {
+    render(panel, [el('p', 'error', 'could not load: ' + err.message)]);
+  }
+
+  var views = {};
+
+  views.overview = function (panel) {
+    return get('overview').then(function (d) {
+      var people = box('the numbers');
+      people.appendChild(stats([
+        ['requests', d.requests || 0, 'page loads served'],
+        ['sessions', d.sessions || 0, 'where the browser ran the tracker'],
+        ['visitors', d.visitors || 0, 'distinct, per day'],
+        ['humans', d.humans || 0],
+        ['bots', d.bots || 0],
+        ['unclear', d.unclear || 0],
+        ['no javascript', d.no_js || 0, 'requests with no session behind them'],
+        ['median visit', fmtMs(d.medianMs), 'humans only'],
+        ['busiest hour', d.busiestHour !== null ? d.busiestHour + ':00 utc' : '—'],
+      ]));
+
+      var days = box('by day');
+      days.appendChild(barList((d.byDay || []).map(function (r) {
+        return [r.day, r.requests, r.requests];
+      }), 'no requests in this window.'));
+
+      var paths = box('pages');
+      paths.appendChild(barList((d.topPaths || []).map(function (r) {
+        return [r.path, r.requests, r.requests];
+      })));
+
+      render(panel, [people, days, paths]);
+    });
+  };
+
+  views.geo = function (panel) {
+    return get('geo').then(function (d) {
+      var mk = function (title, rows) {
+        var s = box(title);
+        s.appendChild(barList(rows.map(function (r) { return [r.name, r.sessions, r.sessions]; })));
+        return s;
+      };
+      render(panel, [
+        mk('countries', d.countries || []),
+        mk('regions', d.regions || []),
+        mk('cities', d.cities || []),
+        mk('networks', d.networks || []),
+      ]);
+    });
+  };
+
+  views.areas = function (panel) {
+    return get('areas').then(function (d) {
+      var total = d.totalSessions || 0;
+
+      var areaBox = box('time per area');
+      areaBox.appendChild(table(
+        ['area', 'total', 'average', 'sessions', 'reach'],
+        (d.areas || []).map(function (r) {
+          return [
+            r.area,
+            fmtMs(r.total_ms),
+            fmtMs(r.mean_ms),
+            r.sessions,
+            total ? Math.round((r.sessions / total) * 100) + '%' : '—',
+          ];
+        }),
+        'nobody has looked at anything yet.'
+      ));
+
+      var byKind = {};
+      (d.events || []).forEach(function (e) {
+        (byKind[e.kind] = byKind[e.kind] || []).push(e);
+      });
+      var labels = {
+        modal_open: 'write-ups opened', outbound: 'links followed off the site',
+        repo: 'repos visited', cv: 'cv', theme: 'theme switched', copy: 'email',
+        modal_close: 'write-ups closed', lightbox: 'photos opened', nav: 'navigation',
+      };
+      var boxes = Object.keys(byKind).filter(function (k) { return k !== 'modal_close'; }).map(function (kind) {
+        var s = box(labels[kind] || kind);
+        s.appendChild(barList(byKind[kind].map(function (e) {
+          return [e.target, e.count, e.count];
+        })));
+        return s;
+      });
+
+      render(panel, [areaBox].concat(boxes));
+    });
+  };
+
+  views.sessions = function (panel) {
+    return get('sessions', '&page=' + pages.sessions).then(function (d) {
+      var s = box('sessions');
+      var rows = (d.sessions || []).map(function (v) {
+        return {
+          cells: [
+            fmtWhen(v.started_at),
+            [v.city, v.region, v.country].filter(Boolean).join(', ') || '—',
+            v.path,
+            v.device,
+            fmtMs(v.duration_ms),
+            (v.max_scroll || 0) + '%',
+            verdictTag(v.bot_verdict, v.bot_score),
+          ],
+          __click: function (row) { expand(row, v); },
+        };
+      });
+      s.appendChild(table(
+        ['when', 'from', 'page', 'device', 'stayed', 'scrolled', 'rating'],
+        rows, 'no sessions in this window.'
+      ));
+      s.appendChild(pager('sessions', d.more));
+      render(panel, [s]);
+    });
+  };
+
+  function expand(row, v) {
+    var next = row.nextElementSibling;
+    if (next && next.classList.contains('detail-row')) { next.remove(); return; }
+
+    var tr = el('tr', 'detail-row');
+    var td = el('td');
+    td.colSpan = 7;
+    td.appendChild(el('p', 'hint', 'loading…'));
+    tr.appendChild(td);
+    row.parentNode.insertBefore(tr, row.nextSibling);
+
+    get('session', '&id=' + encodeURIComponent(v.id)).then(function (d) {
+      td.textContent = '';
+
+      var reasons = [];
+      try { reasons = JSON.parse(v.bot_reasons || '[]'); } catch (e) { reasons = []; }
+
+      td.appendChild(stats([
+        ['referrer', v.referrer || 'none'],
+        ['network', v.as_org || 'unknown'],
+        ['viewport', v.viewport || '—'],
+        ['browser', v.ua || '—'],
+        ['rating', (v.bot_verdict || '—') + ' — ' + (reasons.length ? reasons.join(', ') : 'nothing stood out')],
+      ]));
+
+      var areaWrap = el('div', 'detail-block');
+      areaWrap.appendChild(el('p', 'hint', 'time on each area'));
+      areaWrap.appendChild(barList((d.areas || []).map(function (a) {
+        return [a.area, a.ms, fmtMs(a.ms)];
+      }), 'no area timings.'));
+      td.appendChild(areaWrap);
+
+      var evWrap = el('div', 'detail-block');
+      evWrap.appendChild(el('p', 'hint', 'what they did'));
+      if (!(d.events || []).length) {
+        evWrap.appendChild(el('p', 'hint', 'no clicks.'));
+      } else {
+        var ul = el('ul', 'event-list');
+        d.events.forEach(function (e) {
+          var li = el('li');
+          li.appendChild(el('span', 'event-at', fmtMs(e.at)));
+          li.appendChild(el('span', 'event-kind', e.kind));
+          li.appendChild(el('span', 'event-target', e.target || ''));
+          ul.appendChild(li);
+        });
+        evWrap.appendChild(ul);
+      }
+      td.appendChild(evWrap);
+    }).catch(function (err) {
+      td.textContent = '';
+      td.appendChild(el('p', 'error', 'could not load: ' + err.message));
+    });
+  }
+
+  views.bots = function (panel) {
+    return get('bots').then(function (d) {
+      var sum = box('how sessions were rated');
+      sum.appendChild(barList((d.verdicts || []).map(function (r) {
+        return [r.verdict, r.sessions, r.sessions];
+      })));
+      sum.appendChild(el('p', 'hint',
+        (d.no_js || 0) + ' of ' + (d.requests || 0) + ' requests never ran javascript — '
+        + 'almost always a crawler, a feed reader or someone with scripts blocked.'));
+
+      var agents = box('what they said they were');
+      agents.appendChild(table(
+        ['user agent', 'requests', 'points'],
+        (d.agents || []).map(function (r) { return [r.ua, r.requests, r.points]; }),
+        'no bot-ish requests in this window.'
+      ));
+
+      var nets = box('networks they came from');
+      nets.appendChild(barList((d.networks || []).map(function (r) {
+        return [r.name, r.requests, r.requests];
+      })));
+
+      render(panel, [sum, agents, nets]);
+    });
+  };
+
+  views.changes = function (panel) {
+    return get('changes', '&page=' + pages.changes).then(function (d) {
+      var s = box('what changed');
+      s.appendChild(table(
+        ['when', 'who', 'what', 'action', 'summary'],
+        (d.changes || []).map(function (c) {
+          return [fmtWhen(c.at), c.who, c.resource, c.action, c.summary];
+        }),
+        'nothing has been changed yet.'
+      ));
+      s.appendChild(pager('changes', d.more));
+      render(panel, [s]);
+    });
+  };
+
+  function pager(view, more) {
+    var p = el('p', 'pager');
+    if (pages[view] > 0) {
+      var prev = el('button', 'link-button', '[ newer ]');
+      prev.type = 'button';
+      prev.addEventListener('click', function () { pages[view]--; reload(view); });
+      p.appendChild(prev);
+    }
+    if (more) {
+      var next = el('button', 'link-button', '[ older ]');
+      next.type = 'button';
+      next.addEventListener('click', function () { pages[view]++; reload(view); });
+      p.appendChild(next);
+    }
+    return p;
+  }
+
+  function reload(view) {
+    loaded[view] = false;
+    load(view);
+  }
+
+  function load(view) {
+    if (loaded[view]) return;
+    loaded[view] = true;
+    var panel = $('p-' + view);
+    render(panel, [el('p', 'hint', 'reading the logs…')]);
+    views[view](panel).catch(function (err) {
+      loaded[view] = false;
+      fail(panel, err);
+    });
+  }
+
+  var tabs = [].slice.call(document.querySelectorAll('.tab'));
+  var panels = [].slice.call(document.querySelectorAll('.tab-panel'));
+
+  function showTab(name) {
+    if (!views[name]) name = 'overview';
+    current = name;
+    tabs.forEach(function (t) { t.setAttribute('aria-selected', String(t.dataset.tab === name)); });
+    panels.forEach(function (p) { p.hidden = p.dataset.tab !== name; });
+    if (location.hash.slice(1) !== name) history.replaceState(null, '', '#' + name);
+    load(name);
+  }
+
+  tabs.forEach(function (t, i) {
+    t.addEventListener('click', function () { showTab(t.dataset.tab); });
+    t.addEventListener('keydown', function (e) {
+      var to = null;
+      if (e.key === 'ArrowRight') to = tabs[(i + 1) % tabs.length];
+      if (e.key === 'ArrowLeft') to = tabs[(i - 1 + tabs.length) % tabs.length];
+      if (e.key === 'Home') to = tabs[0];
+      if (e.key === 'End') to = tabs[tabs.length - 1];
+      if (!to) return;
+      e.preventDefault();
+      to.focus();
+      showTab(to.dataset.tab);
+    });
+  });
+
+  addEventListener('hashchange', function () { showTab(location.hash.slice(1)); });
+
+  [].forEach.call(document.querySelectorAll('.range'), function (b) {
+    b.addEventListener('click', function () {
+      range = b.dataset.range;
+      [].forEach.call(document.querySelectorAll('.range'), function (o) {
+        o.classList.toggle('on', o === b);
+      });
+      loaded = {};
+      pages = { sessions: 0, changes: 0 };
+      load(current);
+    });
+    if (b.dataset.range === range) b.classList.add('on');
+  });
+
+  fetch('/api/me').then(function (r) { return r.json(); }).then(function (me) {
+    if (!me.authed) {
+      show(location.hash === '#denied' ? 'denied-box' : 'login-box');
+      return;
+    }
+    $('who').textContent = me.login;
+    show('viewer');
+    showTab(location.hash.slice(1) || 'overview');
+  }).catch(function () {
+    show('login-box');
+  });
+})();
+</script>
+
+</body>
+</html>

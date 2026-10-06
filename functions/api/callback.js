@@ -1,10 +1,14 @@
 import { OWNER, getCookie, makeSessionCookie, secureFlag } from '../_lib.js';
+import { recordChange } from '../_audit.js';
 
 function bounce(location, extraHeaders = {}) {
   return new Response(null, { status: 302, headers: { Location: location, ...extraHeaders } });
 }
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet({ request, env, waitUntil }) {
+  const logLogin = (action, summary, who) =>
+    recordChange(env, waitUntil, { who: who || null, resource: 'login', action, summary });
+
   const url = new URL(request.url);
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
@@ -15,6 +19,7 @@ export async function onRequestGet({ request, env }) {
     console.error('[callback] state check failed', {
       hasCode: !!code, hasState: !!state, hasStateCookie: !!savedState, match: state === savedState,
     });
+    logLogin('failed', 'login attempt failed the state check');
     return bounce('/edit#error-state', { 'Set-Cookie': clearState });
   }
 
@@ -31,6 +36,7 @@ export async function onRequestGet({ request, env }) {
   const tokenBody = await tokenRes.json();
   if (!tokenBody.access_token) {
     console.error('[callback] token exchange failed:', JSON.stringify(tokenBody));
+    logLogin('failed', 'github rejected the app credentials');
     return bounce('/edit#error-token', { 'Set-Cookie': clearState });
   }
 
@@ -44,12 +50,16 @@ export async function onRequestGet({ request, env }) {
   const userBody = await userRes.json();
   if (!userBody.login) {
     console.error('[callback] user lookup failed:', JSON.stringify(userBody));
+    logLogin('failed', 'could not read the github profile');
     return bounce('/edit#error-user', { 'Set-Cookie': clearState });
   }
 
   if (userBody.login !== OWNER) {
+    logLogin('denied', 'someone else signed in with github', String(userBody.login).slice(0, 80));
     return bounce('/edit#denied', { 'Set-Cookie': clearState });
   }
+
+  logLogin('login', 'signed in', userBody.login);
 
   const headers = new Headers({ Location: '/edit' });
   headers.append('Set-Cookie', clearState);
