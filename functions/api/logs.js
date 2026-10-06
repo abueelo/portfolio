@@ -83,7 +83,7 @@ async function areas(db, since) {
               AVG(a.ms) AS mean_ms,
               COUNT(DISTINCT a.visit_id) AS sessions
          FROM visit_areas a JOIN visits v ON v.id = a.visit_id
-        WHERE v.started_at > ? AND v.bot_score < 60
+        WHERE v.started_at > ? AND v.bot_score < 60 AND a.area NOT LIKE '%:%'
         GROUP BY a.area ORDER BY total_ms DESC LIMIT 40`
     ).bind(since)),
     all(db.prepare(

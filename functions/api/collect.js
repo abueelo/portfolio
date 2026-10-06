@@ -7,8 +7,7 @@ const MAX_AREAS = 40;
 const ID_RE = /^[a-f0-9]{16}$/;
 
 const AREAS = new Set([
-  'about', 'projects', 'contact', 'footer', 'header',
-  'gallery', 'photo', 'writeup', 'notfound',
+  'about', 'projects', 'contact', 'footer', 'header', 'gallery', 'notfound',
 ]);
 const KINDS = new Set([
   'modal_open', 'modal_close', 'outbound', 'lightbox', 'theme', 'cv', 'copy', 'repo', 'nav',
@@ -135,8 +134,7 @@ export async function onRequestPost(context) {
   let areaCount = 0;
   for (const name of Object.keys(areas)) {
     if (areaCount >= MAX_AREAS) break;
-    const [base] = name.split(':');
-    if (!AREAS.has(base)) continue;
+    if (!AREAS.has(name)) continue;
     const a = areas[name] || {};
     const ms = clamp(a.ms, 0, 24 * 60 * 60 * 1000);
     if (!ms) continue;
@@ -147,7 +145,7 @@ export async function onRequestPost(context) {
          ON CONFLICT(visit_id, area) DO UPDATE SET
            ms = max(visit_areas.ms, excluded.ms),
            views = max(visit_areas.views, excluded.views)`
-      ).bind(body.id, name.slice(0, 80), ms, clamp(a.views, 0, 1000))
+      ).bind(body.id, name, ms, clamp(a.views, 0, 1000))
     );
   }
 
@@ -160,13 +158,12 @@ export async function onRequestPost(context) {
 
   for (const seg of segments) {
     if (!seg || typeof seg.area !== 'string') continue;
-    const [base] = seg.area.split(':');
-    if (!AREAS.has(base)) continue;
+    if (!AREAS.has(seg.area)) continue;
     const ms = clamp(seg.ms, 0, 24 * 60 * 60 * 1000);
     if (!ms) continue;
     statements.push(
       env.LOGS.prepare('INSERT INTO visit_events (visit_id, at, kind, target, ms) VALUES (?, ?, ?, ?, ?)')
-        .bind(body.id, clamp(seg.at, 0, 24 * 60 * 60 * 1000), 'view', seg.area.slice(0, 80), ms)
+        .bind(body.id, clamp(seg.at, 0, 24 * 60 * 60 * 1000), 'view', seg.area, ms)
     );
   }
 
