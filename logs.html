@@ -200,6 +200,11 @@
 
   var FURNITURE = { header: 1, footer: 1, projects: 1 };
 
+  function isLegacy(r) {
+    var t = r.target || '';
+    return r.kind === 'view' && (t.indexOf('projects:') === 0 || t.indexOf('photo:') === 0);
+  }
+
   function friendlyHost(target) {
     var host = String(target || '').split('/')[0].replace(/^www\./, '');
     if (host.indexOf('linkedin.') > -1) return 'linkedin';
@@ -211,13 +216,10 @@
   function describe(r) {
     var t = r.target || '';
     if (r.kind === 'view') {
-      if (t.indexOf('projects:') === 0) return { label: 'project', name: t.slice(9) };
-      if (t.indexOf('photo:') === 0) return { label: 'photo', name: t.slice(6) };
       if (t === 'about') return { label: 'about box', name: '' };
       if (t === 'contact') return { label: 'links box', name: '' };
       if (t === 'gallery') return { label: 'photographs', name: '' };
       if (t === 'notfound') return { label: '404 page', name: '' };
-      if (t === 'writeup') return { label: 'write-up', name: '' };
       return { label: t, name: '' };
     }
     if (r.kind === 'modal_open') return { label: 'write-up', name: t };
@@ -232,6 +234,7 @@
 
   function worthShowing(r) {
     if (r.kind === 'modal_close') return false;
+    if (isLegacy(r)) return false;
     if (r.kind === 'view' && FURNITURE[r.target]) return false;
     return true;
   }

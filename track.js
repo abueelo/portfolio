@@ -54,19 +54,6 @@
     for (var i = 0; i < SELECTORS.length; i++) {
       if (el.matches(SELECTORS[i][0])) return SELECTORS[i][1];
     }
-    if (el.matches('.project')) {
-      var h = el.querySelector('h3');
-      if (!h) return 'projects';
-      var copy = h.cloneNode(true);
-      [].forEach.call(copy.querySelectorAll('[aria-hidden="true"], .lang, .fill'), function (n) {
-        n.parentNode.removeChild(n);
-      });
-      return 'projects:' + label(copy.textContent);
-    }
-    if (el.matches('.photo')) {
-      var t = el.querySelector('.photo-title');
-      return 'photo:' + label(t && t.textContent);
-    }
     return null;
   }
 
@@ -126,20 +113,12 @@
 
   function scan() {
     var list = document.querySelectorAll(
-      '#about, #photo-about, #projects, #contact, #photographs, #not-found, header, footer, .project, .photo'
+      '#about, #photo-about, #projects, #contact, #photographs, #not-found, header, footer'
     );
     [].forEach.call(list, watch);
   }
 
   scan();
-
-  if (window.MutationObserver) {
-    var pending = null;
-    new MutationObserver(function () {
-      clearTimeout(pending);
-      pending = setTimeout(scan, 200);
-    }).observe(document.body, { childList: true, subtree: true });
-  }
 
   function record(kind, target) {
     if (events.length >= MAX_EVENTS) return null;
