@@ -16,8 +16,11 @@
   var start = Date.now();
   var IDLE_AFTER = 60000;
   var MAX_EVENTS = 200;
+  var MAX_SEGMENTS = 300;
+  var MIN_SEGMENT = 500;
 
-  var areas = {};        // name -> { ms, views, since }
+  var areas = {};
+  var segments = [];
   var events = [];
   var maxScroll = 0;
   var lastInput = Date.now();
@@ -80,7 +83,11 @@
   function stopClock(name) {
     var a = areas[name];
     if (!a || !a.since) return;
-    a.ms += Date.now() - a.since;
+    var spent = Date.now() - a.since;
+    a.ms += spent;
+    if (spent >= MIN_SEGMENT && segments.length < MAX_SEGMENTS) {
+      segments.push({ area: name, at: a.since - start, ms: spent });
+    }
     a.since = 0;
   }
 
@@ -211,11 +218,16 @@
 
   function payload(phase) {
     var out = {};
+    var now = Date.now();
+    var open = [];
     for (var name in areas) {
       var a = areas[name];
-      var ms = a.ms + (a.since ? Date.now() - a.since : 0);
+      var live = a.since ? now - a.since : 0;
+      var ms = a.ms + live;
       if (ms > 0) out[name] = { ms: ms, views: a.views };
+      if (live >= MIN_SEGMENT) open.push({ area: name, at: a.since - start, ms: live });
     }
+    var timeline = segments.concat(open).sort(function (x, y) { return x.at - y.at; });
     return {
       id: visitId,
       phase: phase,
@@ -227,6 +239,7 @@
       viewport: innerWidth + 'x' + innerHeight,
       maxScroll: maxScroll,
       areas: out,
+      segments: timeline.slice(0, MAX_SEGMENTS),
       events: events,
       signals: signals,
     };

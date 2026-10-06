@@ -13,6 +13,7 @@ const AREAS = new Set([
 const KINDS = new Set([
   'modal_open', 'modal_close', 'outbound', 'lightbox', 'theme', 'cv', 'copy', 'repo', 'nav',
 ]);
+const MAX_SEGMENTS = 300;
 
 const DEVICES = new Set(['desktop', 'mobile', 'tablet']);
 
@@ -150,13 +151,30 @@ export async function onRequestPost(context) {
     );
   }
 
+  const segments = Array.isArray(body.segments) ? body.segments.slice(0, MAX_SEGMENTS) : [];
   const events = Array.isArray(body.events) ? body.events.slice(0, MAX_EVENTS) : [];
-  if (events.length) {
+
+  if (events.length || segments.length) {
     statements.push(env.LOGS.prepare('DELETE FROM visit_events WHERE visit_id = ?').bind(body.id));
+  }
+
+  for (const seg of segments) {
+    if (!seg || typeof seg.area !== 'string') continue;
+    const [base] = seg.area.split(':');
+    if (!AREAS.has(base)) continue;
+    const ms = clamp(seg.ms, 0, 24 * 60 * 60 * 1000);
+    if (!ms) continue;
+    statements.push(
+      env.LOGS.prepare('INSERT INTO visit_events (visit_id, at, kind, target, ms) VALUES (?, ?, ?, ?, ?)')
+        .bind(body.id, clamp(seg.at, 0, 24 * 60 * 60 * 1000), 'view', seg.area.slice(0, 80), ms)
+    );
+  }
+
+  if (events.length) {
     for (const e of events) {
       if (!e || !KINDS.has(e.kind)) continue;
       statements.push(
-        env.LOGS.prepare('INSERT INTO visit_events (visit_id, at, kind, target) VALUES (?, ?, ?, ?)')
+        env.LOGS.prepare('INSERT INTO visit_events (visit_id, at, kind, target, ms) VALUES (?, ?, ?, ?, NULL)')
           .bind(body.id, clamp(e.at, 0, 24 * 60 * 60 * 1000), e.kind, str(e.target, 200))
       );
     }

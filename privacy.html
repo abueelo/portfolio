@@ -52,8 +52,9 @@
     <h2><span class="bracket" aria-hidden="true">[ </span>what is not<span class="bracket" aria-hidden="true"> ]</span></h2>
     <p>No cookies and nothing in local storage — the id that groups one visit together is a
       random number held in memory, and it's gone the moment you close the tab.</p>
-    <p>Your IP address is never stored. It goes through a one-way hash with a salt that
-      changes every day, which is only there to tell two visits apart on the same day.</p>
+    <p>Your IP address is never stored. It goes through a one-way hash, and the result is
+      only useful for telling one visitor apart from another. The hash is rebuilt from scratch
+      every 30 days, so it can't follow you for longer than that.</p>
     <p>No third-party analytics, no advertising, no tracking across other sites, and nothing
       is shared or sold.</p>
   </section>
