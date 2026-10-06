@@ -2,12 +2,13 @@ import { hmac, randomHex } from './_lib.js';
 import { withLogs } from './_schema.js';
 
 const RETAIN_DAYS = 90;
+const ID_WINDOW_DAYS = 30;
 
 export async function visitorKey(request, env) {
   const ip = request.headers.get('CF-Connecting-IP') || '';
   const ua = request.headers.get('User-Agent') || '';
-  const day = new Date().toISOString().slice(0, 10);
-  const salt = await hmac(env.SESSION_SECRET || 'dev', day);
+  const window = Math.floor(Date.now() / (ID_WINDOW_DAYS * 24 * 60 * 60 * 1000));
+  const salt = await hmac(env.SESSION_SECRET || 'dev', 'w' + window);
   const buf = await crypto.subtle.digest(
     'SHA-256',
     new TextEncoder().encode(ip + '|' + ua + '|' + salt)

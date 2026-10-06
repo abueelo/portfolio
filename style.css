@@ -1475,13 +1475,32 @@ footer { animation-delay: 0.32s; }
 }
 
 .event-kind {
-  width: 13ch;
+  width: 16ch;
   color: var(--cyan);
+  white-space: nowrap;
 }
 
 .event-target {
   color: var(--fg);
   overflow-wrap: anywhere;
+  flex: 1;
+  min-width: 12ch;
+}
+
+.event-dur {
+  color: var(--amber);
+  min-width: 7ch;
+  text-align: right;
+}
+
+.visit-head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0 1ch;
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.35rem;
+  border-bottom: 1px dotted var(--border);
+  font-size: 0.85rem;
 }
 
 .pager {
@@ -1500,7 +1519,13 @@ footer { animation-delay: 0.32s; }
     width: 100%;
   }
 
-  .bar-value {
+  .bar-value,
+  .event-dur {
     text-align: left;
+  }
+
+  .event-kind {
+    width: auto;
+    white-space: normal;
   }
 }

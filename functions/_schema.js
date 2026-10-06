@@ -28,7 +28,7 @@ const DDL = [
 
   `CREATE TABLE IF NOT EXISTS visit_events (
      id INTEGER PRIMARY KEY AUTOINCREMENT, visit_id TEXT NOT NULL,
-     at INTEGER NOT NULL, kind TEXT NOT NULL, target TEXT
+     at INTEGER NOT NULL, kind TEXT NOT NULL, target TEXT, ms INTEGER
    )`,
   'CREATE INDEX IF NOT EXISTS visit_events_visit ON visit_events (visit_id, at)',
 
@@ -39,21 +39,30 @@ const DDL = [
   'CREATE INDEX IF NOT EXISTS changes_at ON changes (at)',
 ];
 
-let creating = null;
+const MIGRATIONS = [
+  'ALTER TABLE visit_events ADD COLUMN ms INTEGER',
+];
 
-function createTables(db) {
-  if (!creating) {
-    creating = db.batch(DDL.map(sql => db.prepare(sql))).finally(() => { creating = null; });
+let repairing = null;
+
+function repair(db) {
+  if (!repairing) {
+    repairing = db.batch(DDL.map(sql => db.prepare(sql)))
+      .then(() => Promise.all(
+        MIGRATIONS.map(sql => db.prepare(sql).run().catch(() => {}))
+      ))
+      .finally(() => { repairing = null; });
   }
-  return creating;
+  return repairing;
 }
 
 export async function withLogs(env, fn) {
   try {
     return await fn();
   } catch (err) {
-    if (!/no such table/i.test(String((err && err.message) || err))) throw err;
-    await createTables(env.LOGS);
+    const message = String((err && err.message) || err);
+    if (!/no such table|no such column|has no column/i.test(message)) throw err;
+    await repair(env.LOGS);
     return fn();
   }
 }
