@@ -98,6 +98,7 @@
       if (visible[name] && running()) startClock(name);
       else stopClock(name);
     }
+    tickWriteup(false);
   }
 
   var io = new IntersectionObserver(function (entries) {
@@ -141,8 +142,32 @@
   }
 
   function record(kind, target) {
-    if (events.length >= MAX_EVENTS) return;
-    events.push({ at: Date.now() - start, kind: kind, target: label(target) || null });
+    if (events.length >= MAX_EVENTS) return null;
+    var ev = { at: Date.now() - start, kind: kind, target: label(target) || null };
+    events.push(ev);
+    return ev;
+  }
+
+  var writeup = null;
+
+  function tickWriteup(close) {
+    if (!writeup) return;
+    if (writeup.since) {
+      writeup.ms += Date.now() - writeup.since;
+      writeup.since = 0;
+    }
+    if (!close && running()) writeup.since = Date.now();
+    if (writeup.ev) writeup.ev.ms = writeup.ms;
+  }
+
+  function openWriteup(name) {
+    tickWriteup(true);
+    writeup = { ev: record('modal_open', name), ms: 0, since: running() ? Date.now() : 0 };
+  }
+
+  function closeWriteup() {
+    tickWriteup(true);
+    writeup = null;
   }
 
   document.addEventListener('click', function (e) {
@@ -173,7 +198,8 @@
       if (open === wasOpen) return;
       wasOpen = open;
       var title = document.getElementById('modal-title-text');
-      record(open ? 'modal_open' : 'modal_close', title && title.textContent);
+      if (open) openWriteup(title && title.textContent);
+      else closeWriteup();
     }).observe(modal, { attributes: true, attributeFilter: ['hidden'] });
   }
 
@@ -217,6 +243,7 @@
   }
 
   function payload(phase) {
+    tickWriteup(false);
     var out = {};
     var now = Date.now();
     var open = [];

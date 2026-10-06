@@ -174,8 +174,11 @@ export async function onRequestPost(context) {
     for (const e of events) {
       if (!e || !KINDS.has(e.kind)) continue;
       statements.push(
-        env.LOGS.prepare('INSERT INTO visit_events (visit_id, at, kind, target, ms) VALUES (?, ?, ?, ?, NULL)')
-          .bind(body.id, clamp(e.at, 0, 24 * 60 * 60 * 1000), e.kind, str(e.target, 200))
+        env.LOGS.prepare('INSERT INTO visit_events (visit_id, at, kind, target, ms) VALUES (?, ?, ?, ?, ?)')
+          .bind(
+            body.id, clamp(e.at, 0, 24 * 60 * 60 * 1000), e.kind, str(e.target, 200),
+            e.ms === undefined || e.ms === null ? null : clamp(e.ms, 0, 24 * 60 * 60 * 1000)
+          )
       );
     }
   }

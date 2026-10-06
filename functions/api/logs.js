@@ -87,9 +87,11 @@ async function areas(db, since) {
         GROUP BY a.area ORDER BY total_ms DESC LIMIT 40`
     ).bind(since)),
     all(db.prepare(
-      `SELECT e.kind AS kind, e.target AS target, COUNT(*) AS count
+      `SELECT e.kind AS kind, e.target AS target, COUNT(*) AS count,
+              COALESCE(SUM(e.ms), 0) AS total_ms,
+              CAST(COALESCE(AVG(e.ms), 0) AS INTEGER) AS mean_ms
          FROM visit_events e JOIN visits v ON v.id = e.visit_id
-        WHERE v.started_at > ? AND v.bot_score < 60
+        WHERE v.started_at > ? AND v.bot_score < 60 AND e.kind != 'view'
         GROUP BY e.kind, e.target ORDER BY count DESC LIMIT 60`
     ).bind(since)),
   ]);

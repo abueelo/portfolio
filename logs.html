@@ -198,11 +198,43 @@
     return wrap;
   }
 
-  var STEP_LABEL = {
-    view: 'looked at', modal_open: 'opened write-up', modal_close: 'closed write-up',
-    outbound: 'followed link', repo: 'opened repo', cv: 'cv',
-    theme: 'switched theme', copy: 'email', lightbox: 'opened photo', nav: 'went to',
-  };
+  var FURNITURE = { header: 1, footer: 1, projects: 1 };
+
+  function friendlyHost(target) {
+    var host = String(target || '').split('/')[0].replace(/^www\./, '');
+    if (host.indexOf('linkedin.') > -1) return 'linkedin';
+    if (host.indexOf('github.') > -1) return 'github';
+    if (host.indexOf('instagram.') > -1) return 'instagram';
+    return host || 'a link';
+  }
+
+  function describe(r) {
+    var t = r.target || '';
+    if (r.kind === 'view') {
+      if (t.indexOf('projects:') === 0) return { label: 'project', name: t.slice(9) };
+      if (t.indexOf('photo:') === 0) return { label: 'photo', name: t.slice(6) };
+      if (t === 'about') return { label: 'about box', name: '' };
+      if (t === 'contact') return { label: 'links box', name: '' };
+      if (t === 'gallery') return { label: 'photographs', name: '' };
+      if (t === 'notfound') return { label: '404 page', name: '' };
+      if (t === 'writeup') return { label: 'write-up', name: '' };
+      return { label: t, name: '' };
+    }
+    if (r.kind === 'modal_open') return { label: 'write-up', name: t };
+    if (r.kind === 'outbound') return { label: 'clicked', name: friendlyHost(t) };
+    if (r.kind === 'repo') return { label: 'clicked repo', name: friendlyHost(t) };
+    if (r.kind === 'cv') return { label: 'cv', name: t || 'opened' };
+    if (r.kind === 'theme') return { label: 'switched theme', name: t };
+    if (r.kind === 'copy') return { label: 'email', name: '' };
+    if (r.kind === 'lightbox') return { label: 'photo', name: t };
+    return { label: r.kind, name: t };
+  }
+
+  function worthShowing(r) {
+    if (r.kind === 'modal_close') return false;
+    if (r.kind === 'view' && FURNITURE[r.target]) return false;
+    return true;
+  }
 
   function fmtOffset(ms) {
     var total = Math.round((Number(ms) || 0) / 1000);
@@ -212,18 +244,38 @@
   }
 
   function timelineList(rows, empty) {
-    rows = rows || [];
+    rows = (rows || []).filter(worthShowing);
     if (!rows.length) return el('p', 'hint', empty || 'nothing recorded.');
     var ul = el('ul', 'event-list');
     rows.forEach(function (r) {
+      var d = describe(r);
       var li = el('li');
       li.appendChild(el('span', 'event-at', fmtOffset(r.at)));
-      li.appendChild(el('span', 'event-kind', STEP_LABEL[r.kind] || r.kind));
-      li.appendChild(el('span', 'event-target', r.target || ''));
+      li.appendChild(el('span', 'event-kind', d.label));
+      li.appendChild(el('span', 'event-target', d.name));
       li.appendChild(el('span', 'event-dur', r.ms ? fmtMs(r.ms) : ''));
       ul.appendChild(li);
     });
     return ul;
+  }
+
+  function lookedAt(rowsByVisit) {
+    var seen = {};
+    Object.keys(rowsByVisit || {}).forEach(function (visitId) {
+      (rowsByVisit[visitId] || []).filter(worthShowing).forEach(function (r) {
+        var d = describe(r);
+        var key = d.label + (d.name ? ' · ' + d.name : '');
+        var row = seen[key] || (seen[key] = { ms: 0, times: 0 });
+        row.ms += Number(r.ms) || 0;
+        row.times++;
+      });
+    });
+    return Object.keys(seen).map(function (key) {
+      var row = seen[key];
+      var detail = row.ms ? fmtMs(row.ms) : (row.times + '×');
+      if (row.ms && row.times > 1) detail += ' · ' + row.times + '×';
+      return [key, row.ms || 0, detail];
+    }).sort(function (a, b) { return b[1] - a[1]; });
   }
 
   function verdictTag(verdict, score) {
@@ -326,15 +378,18 @@
         (byKind[e.kind] = byKind[e.kind] || []).push(e);
       });
       var labels = {
-        modal_open: 'write-ups opened', outbound: 'links followed off the site',
+        modal_open: 'time spent reading write-ups', outbound: 'links followed off the site',
         repo: 'repos visited', cv: 'cv', theme: 'theme switched', copy: 'email',
         modal_close: 'write-ups closed', lightbox: 'photos opened', nav: 'navigation',
       };
       var boxes = Object.keys(byKind).filter(function (k) { return k !== 'modal_close'; }).map(function (kind) {
         var s = box(labels[kind] || kind);
+        var timed = kind === 'modal_open';
         s.appendChild(barList(byKind[kind].map(function (e) {
-          return [e.target, e.count, e.count];
+          if (!timed) return [e.target, e.count, e.count];
+          return [e.target, e.total_ms, fmtMs(e.total_ms) + ' · ' + e.count + '× · ' + fmtMs(e.mean_ms) + ' each'];
         })));
+        if (timed) s.appendChild(el('p', 'hint', 'ranked by how long they were left open.'));
         return s;
       });
 
@@ -398,6 +453,15 @@
         return;
       }
 
+      var summary = el('div', 'detail-block');
+      summary.appendChild(el('p', 'hint', 'what they looked at, and for how long'));
+      summary.appendChild(barList(lookedAt(d.timeline), 'nothing recorded.'));
+      td.appendChild(summary);
+
+      var flow = el('div', 'detail-block');
+      flow.appendChild(el('p', 'hint', 'visit by visit, in order'));
+      td.appendChild(flow);
+
       d.visits.forEach(function (visit) {
         var wrap = el('div', 'detail-block');
         var head = el('p', 'visit-head');
@@ -407,7 +471,7 @@
           fmtMs(visit.duration_ms) + ' · ' + (visit.max_scroll || 0) + '% down'));
         wrap.appendChild(head);
         wrap.appendChild(timelineList((d.timeline || {})[visit.id], 'nothing recorded for this visit.'));
-        td.appendChild(wrap);
+        flow.appendChild(wrap);
       });
     }).catch(function (err) {
       td.textContent = '';
