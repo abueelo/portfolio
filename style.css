@@ -1373,7 +1373,7 @@ footer { animation-delay: 0.32s; }
 }
 
 .bar-label {
-  width: 22ch;
+  width: 30ch;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
